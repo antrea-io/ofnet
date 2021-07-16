@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"net"
+
 	"antrea.io/libOpenflow/openflow13"
 	"antrea.io/libOpenflow/util"
-	"net"
 )
 
 type Uint32WithMask struct {
@@ -749,7 +750,7 @@ func GetUint32ValueWithRangeFromBytes(data []byte, rng *openflow13.NXRange) (uin
 	}
 	startByte := int(rng.GetOfs() / 8)
 	startDiff := startByte * 8
-	endByte := int(rng.GetNbits() + 7/8)
+	endByte := int((rng.GetNbits() + 7) / 8)
 	if endByte > len(data) {
 		return 0, errors.New("range is larger than data length")
 	}
@@ -765,7 +766,7 @@ func GetUint64ValueWithRangeFromBytes(data []byte, rng *openflow13.NXRange) (uin
 	}
 	startByte := int(rng.GetOfs() / 8)
 	startDiff := startByte * 8
-	endByte := int(rng.GetNbits() + 7/8)
+	endByte := int((rng.GetNbits() + 7) / 8)
 	if endByte > len(data) {
 		return 0, errors.New("range is larger than data length")
 	}

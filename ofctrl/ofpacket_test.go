@@ -1,3 +1,4 @@
+// #nosec G404: random number generator not used for security purposes
 package ofctrl
 
 import (
@@ -181,6 +182,7 @@ func testPacketInOut(t *testing.T, ofApp *packetApp, brName string, ipv6 bool) {
 	flow1.Send(openflow13.FC_ADD)
 
 	act4, err := NewNXLoadAction("NXM_NX_REG3", uint64(0xaaaa), rng2)
+	require.NoError(t, err)
 	packetOut := generateTCPPacketOut(srcMAC, dstMAC, srcIP, dstIP, dstPort, 0, nil, []OFAction{act4})
 	if ipv6 {
 		assert.NotNil(t, packetOut.IPv6Header)
@@ -261,6 +263,8 @@ func generateTCPPacketOut(srcMAC, dstMAC net.HardwareAddr, srcIP net.IP, dstIP n
 	return pktOut
 }
 
+// keeping this in case it is useful later
+//nolint:deadcode
 func generatePacketOut(srcMAC net.HardwareAddr, dstMAC net.HardwareAddr, srcIP net.IP, dstIP net.IP, outputPort *uint32, actions []OFAction) *PacketOut {
 	var outPort uint32
 	if outputPort == nil {

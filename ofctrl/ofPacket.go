@@ -1,3 +1,4 @@
+// #nosec G404: random number generator not used for security purposes
 package ofctrl
 
 import (
@@ -103,12 +104,12 @@ func GenerateTCPPacket(srcMAC, dstMAC net.HardwareAddr, srcIP, dstIP net.IP, dst
 	var pktOut *PacketOut
 	if srcIP.To4() == nil {
 		ipv6Header := &protocol.IPv6{
-			Version:        6,
-			Length:         tcpHeader.Len(),
-			HopLimit:       64,
-			NextHeader:     protocol.Type_TCP,
-			NWSrc:          srcIP,
-			NWDst:          dstIP,
+			Version:    6,
+			Length:     tcpHeader.Len(),
+			HopLimit:   64,
+			NextHeader: protocol.Type_TCP,
+			NWSrc:      srcIP,
+			NWDst:      dstIP,
 		}
 		pktOut = &PacketOut{
 			SrcMAC:     srcMAC,

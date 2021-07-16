@@ -12,6 +12,7 @@ WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 See the License for the specific language governing permissions and
 limitations under the License.
 */
+
 package ofctrl
 
 // This library implements a simple openflow 1.3 controller
@@ -91,7 +92,7 @@ type Controller struct {
 func NewController(app AppInterface) *Controller {
 	c := new(Controller)
 	c.connectMode = ServerMode
-	c.id = uint16(rand.Uint32())
+	c.id = uint16(rand.Uint32()) // #nosec G404: random number generator not used for security purposes
 
 	// for debug logs
 	// log.SetLevel(log.DebugLevel)
@@ -261,7 +262,7 @@ func (c *Controller) handleConnection(conn net.Conn) {
 			switch m := msg.(type) {
 			// A Hello message of the appropriate type
 			// completes version negotiation. If version
-			// types are incompatable, it is possible the
+			// types are incompatible, it is possible the
 			// connection may be servered without error.
 			case *common.Hello:
 				if m.Version == openflow13.VERSION {

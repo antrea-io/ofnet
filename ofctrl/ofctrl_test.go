@@ -177,11 +177,9 @@ func TestMain(m *testing.M) {
 	time.Sleep(8 * time.Second)
 	if !ofActor.isSwitchConnected {
 		log.Fatalf("ovsbr0 switch did not connect within 20sec")
-		return
 	}
 	if !ofActor2.isSwitchConnected {
 		log.Fatalf("ovsbr12 switch did not connect within 20sec")
-		return
 	}
 
 	log.Infof("Switch connected. Creating tables..")
@@ -756,7 +754,9 @@ func TestOFSwitch_DumpFlowStats(t *testing.T) {
 	flow1.SetL4Field(4000, "TCPSrc")
 	f1 := roundID | categoryID | uint64(1)<<24
 	flow1.CookieID = f1
-	err = flow1.Next(ofActor.nextTable)
+	if err := flow1.Next(ofActor.nextTable); err != nil {
+		t.Errorf("Error installing inport flow. Err: %v", err)
+	}
 
 	flow2, err := ofActor2.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -783,7 +783,7 @@ func TestOFSwitch_DumpFlowStats(t *testing.T) {
 	cookieID := roundID | categoryID
 	cookieMask := uint64(0xffffff)
 	stats, err := ofActor2.Switch.DumpFlowStats(cookieID, &cookieMask, nil, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	if stats == nil {
 		t.Fatalf("Failed to dump flows")
 	}
@@ -962,23 +962,23 @@ func TestBundles(t *testing.T) {
 	// Test transaction complete workflow
 	tx := ofActor2.Switch.NewTransaction(Atomic)
 	err := tx.Begin()
-	require.Nil(t, err, fmt.Sprintf("Failed to create transaction: %v", err))
+	require.NoError(t, err, "Failed to create transaction")
 	_, found := ofActor2.Switch.txChans[tx.ID]
 	assert.True(t, found, fmt.Sprintf("Failed to add transaction with ID %d from switch queues", tx.ID))
 	flow1 := createFlow(t, "22:11:11:11:11:11", "192.168.2.11")
 	flow2 := createFlow(t, "22:11:11:11:11:12", "192.168.2.12")
 	for _, f := range []*Flow{flow1, flow2} {
 		fm, err := f.GetBundleMessage(openflow13.FC_ADD)
-		require.Nil(t, err, "Failed to generate FlowMod from Flow")
+		require.NoError(t, err, "Failed to generate FlowMod from Flow")
 		err = tx.AddMessage(fm)
-		require.Nil(t, err, fmt.Sprintf("Failed to add flowMod into transaction: %v", err))
+		require.NoError(t, err, "Failed to add flowMod into transaction")
 	}
 	count, err := tx.Complete()
-	require.Nil(t, err, fmt.Sprintf("Failed to complete transaction: %v", err))
+	require.NoError(t, err, "Failed to complete transaction")
 	assert.Equal(t, 2, count)
 	assert.True(t, tx.closed)
 	err = tx.Commit()
-	require.Nil(t, err, fmt.Sprintf("Failed to commit transaction: %v", err))
+	require.NoError(t, err, "Failed to commit transaction")
 	actionStr := "goto_table:1"
 	for _, matchStr := range []string{
 		"priority=100,ip,dl_src=22:11:11:11:11:11,nw_src=192.168.2.11",
@@ -994,18 +994,18 @@ func TestBundles(t *testing.T) {
 	// Test transaction abort workflow
 	tx2 := ofActor2.Switch.NewTransaction(Atomic)
 	err = tx2.Begin()
-	require.Nil(t, err, fmt.Sprintf("Failed to create transaction: %v", err))
+	require.NoError(t, err, "Failed to create transaction")
 	flow3 := createFlow(t, "22:11:11:11:11:13", "192.168.2.13")
 	fm3, err := flow3.GetBundleMessage(openflow13.FC_ADD)
-	require.Nil(t, err, "Failed to generate FlowMod from Flow")
+	require.NoError(t, err, "Failed to generate FlowMod from Flow")
 	err = tx2.AddMessage(fm3)
-	require.Nil(t, err, fmt.Sprintf("Failed to add flowMod into transaction: %v", err))
+	require.NoError(t, err, "Failed to add flowMod into transaction")
 	count, err = tx2.Complete()
-	require.Nil(t, err, fmt.Sprintf("Failed to complete transaction: %v", err))
+	require.NoError(t, err, "Failed to complete transaction")
 	assert.True(t, tx2.closed)
 	assert.Equal(t, 1, count)
 	err = tx2.Abort()
-	require.Nil(t, err, fmt.Sprintf("Failed to abort transaction: %v", err))
+	require.NoError(t, err, "Failed to abort transaction")
 	matchStr := "priority=100,ip,dl_src=22:11:11:11:11:13,nw_src=192.168.2.13"
 	if ofctlDumpFlowMatch(brName, int(ofActor2.inputTable.TableId), matchStr, actionStr) {
 		t.Errorf("ovsDriver2: %s, target flow not found on OVS, match: %s, actions: %s", brName, matchStr, actionStr)
@@ -1016,15 +1016,15 @@ func TestBundles(t *testing.T) {
 	// Test failure in AddMessage
 	tx3 := ofActor2.Switch.NewTransaction(Atomic)
 	err = tx3.Begin()
-	require.Nil(t, err, fmt.Sprintf("Failed to create transaction: %v", err))
+	require.NoError(t, err, "Failed to create transaction")
 	flow4 := createFlow(t, "33:11:11:11:11:14", "192.168.3.14")
 	fm4, err := flow4.GetBundleMessage(openflow13.FC_ADD)
-	require.Nil(t, err, "Failed to generate FlowMod from Flow")
+	require.NoError(t, err, "Failed to generate FlowMod from Flow")
 	message, _ := tx3.createBundleAddMessage(fm4)
 	message.Header.Xid = uint32(100001)
 	tx3.ofSwitch.Send(message)
 	count, err = tx3.Complete()
-	require.Nil(t, err, fmt.Sprintf("Failed to find addMesssage errors transaction: %v", err))
+	require.NoError(t, err, "Failed to find addMesssage errors transaction")
 	assert.True(t, tx3.closed)
 	assert.Equal(t, 0, count)
 }
@@ -1034,7 +1034,7 @@ func TestBundle2(t *testing.T) {
 	// Test transaction complete workflow
 	tx := ofActor2.Switch.NewTransaction(Ordered)
 	err := tx.Begin()
-	require.Nil(t, err, fmt.Sprintf("Failed to create transaction: %v", err))
+	require.NoError(t, err, "Failed to create transaction")
 	_, found := ofActor2.Switch.txChans[tx.ID]
 	assert.True(t, found, fmt.Sprintf("Failed to add transaction with ID %d from switch queues", tx.ID))
 
@@ -1064,22 +1064,22 @@ func TestBundle2(t *testing.T) {
 		Ethertype: 0x0800,
 		InputPort: inPort8,
 	})
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow1.NextElem = group1
 	flowmod, err := flow1.GetBundleMessage(openflow13.FC_ADD)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	for _, mod := range []OpenFlowModMessage{groupMod, flowmod} {
 		err = tx.AddMessage(mod)
-		require.Nil(t, err, fmt.Sprintf("Failed to add mod message into transaction: %v", err))
+		require.NoError(t, err, "Failed to add mod message into transaction")
 	}
 
 	count, err := tx.Complete()
-	require.Nil(t, err, fmt.Sprintf("Failed to complete transaction: %v", err))
+	require.NoError(t, err, "Failed to complete transaction")
 	assert.Equal(t, 2, count)
 	assert.True(t, tx.closed)
 	err = tx.Commit()
-	require.Nil(t, err, fmt.Sprintf("Failed to Commit transaction: %v", err))
+	require.NoError(t, err, "Failed to commit transaction")
 	_, found = ofActor2.Switch.txChans[tx.ID]
 	assert.False(t, found)
 
@@ -1143,7 +1143,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	newSrcMac := uint64(0x111111222222)
 	rng1 := openflow13.NewNXRange(0, 47)
 	loadReg, err := NewNXLoadAction("OXM_OF_ETH_SRC", newSrcMac, rng1)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow1.ApplyActions([]OFAction{loadReg})
 	flow1.Goto(ofApp.nextTable.TableId)
 	verifyNewFlowInstallAndDelete(t, flow1, brName, ofApp.inputTable.TableId,
@@ -1163,7 +1163,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	}
 	rng2 := openflow13.NewNXRange(0, 47)
 	act, err := NewNXMoveAction("NXM_OF_ETH_SRC", "NXM_OF_ETH_DST", rng2, rng2)
-	require.Nil(t, err, fmt.Sprintf("Failed to move data from NXM_OF_ETH_SRC to NXM_OF_ETH_DST: %+v", err))
+	require.NoError(t, err, "Failed to move data from NXM_OF_ETH_SRC to NXM_OF_ETH_DST")
 	flow2.ApplyActions([]OFAction{act})
 	flow2.Goto(ofApp.nextTable.TableId)
 	verifyNewFlowInstallAndDelete(t, flow2, brName, ofApp.inputTable.TableId,
@@ -1209,16 +1209,16 @@ func TestNewFlowActionAPIs(t *testing.T) {
 		},
 	}
 	conjunction1, err := NewNXConjunctionAction(uint32(100), uint8(2), uint8(5))
-	require.Nil(t, err)
+	require.NoError(t, err)
 	conjunction2, err := NewNXConjunctionAction(uint32(101), uint8(2), uint8(3))
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow5.ApplyActions([]OFAction{
 		conjunction1,
 		conjunction2,
 	})
 	// install it
 	err = flow5.Send(openflow13.FC_ADD)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	matchStr := "priority=100,in_port=105"
 	actionStr := "conjunction(100,2/5),conjunction(101,2/3)"
 	tableID := int(ofApp.inputTable.TableId)
@@ -1231,6 +1231,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	log.Info("Flow realize status is ", flow5.IsRealized())
 	flow5.ResetApplyActions([]OFAction{conjunction1})
 	err = flow5.Send(openflow13.FC_MODIFY)
+	require.NoError(t, err)
 	actionStr = "conjunction(100,2/5)"
 	// verify metadata action exists
 	if !ofctlDumpFlowMatch(brName, tableID, matchStr, actionStr) {
@@ -1238,7 +1239,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	}
 	// delete the flow
 	err = flow5.Send(openflow13.FC_DELETE_STRICT)
-	require.Nil(t, err, fmt.Sprintf("Error deleting the flow. Err: %v", err))
+	require.NoError(t, err, "Error deleting the flow")
 	// Make sure they are really gone
 	if ofctlDumpFlowMatch(brName, tableID, matchStr, actionStr) {
 		t.Errorf("br: %s, target flow still found in OVS after deleting it", brName)
@@ -1279,11 +1280,11 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	sMAC, _ := net.ParseMAC("11:11:11:11:11:22")
 	sIP := net.ParseIP("192.168.1.100")
 	move1, err := NewNXMoveAction("NXM_OF_ETH_SRC", "NXM_OF_ETH_DST", rng2, rng2)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	move2, err := NewNXMoveAction("NXM_NX_ARP_SHA", "NXM_NX_ARP_THA", rng2, rng2)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	move3, err := NewNXMoveAction("NXM_OF_ARP_SPA", "NXM_OF_ARP_TPA", rng4, rng4)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow7.ApplyActions([]OFAction{
 		move1, move2, move3,
 		&SetARPOpAction{2},
@@ -1447,11 +1448,11 @@ func TestSetTunnelMetadata(t *testing.T) {
 
 	tlvMap := &openflow13.TLVTableMap{OptClass: 0xff01, OptType: 0, OptLength: 4, Index: 0}
 	err := ofApp.Switch.AddTunnelTLVMap(tlvMap.OptClass, tlvMap.OptType, tlvMap.OptLength, tlvMap.Index)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	// Test "AddTunnelTLVMap" is idempotent
 	err = ofApp.Switch.AddTunnelTLVMap(tlvMap.OptClass, tlvMap.OptType, tlvMap.OptLength, tlvMap.Index)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	inPort9 := uint32(111)
 	flow14 := &Flow{
@@ -1464,7 +1465,7 @@ func TestSetTunnelMetadata(t *testing.T) {
 	}
 	rng14 := openflow13.NewNXRange(8, 15)
 	loadReg2, err := NewNXLoadAction("NXM_NX_TUN_METADATA0", uint64(0x12), rng14)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow14.ApplyActions([]OFAction{loadReg2})
 	verifyNewFlowInstallAndDelete(t, flow14, brName, ofApp.inputTable.TableId,
 		"priority=100,ip,in_port=111",
@@ -1489,7 +1490,7 @@ func TestSetTunnelMetadata(t *testing.T) {
 	}
 	rng16 := openflow13.NewNXRange(28, 31)
 	moveAction, err := NewNXMoveAction("NXM_NX_TUN_METADATA0", "NXM_NX_REG0", rng16, rng16)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	tlvMapStatus := ofApp.Switch.GetTLVMapTableStatus()
 	ResetFieldLength(moveAction.SrcField, tlvMapStatus)
 	flow15.ApplyActions([]OFAction{moveAction})
@@ -1499,7 +1500,7 @@ func TestSetTunnelMetadata(t *testing.T) {
 		"move:NXM_NX_TUN_METADATA0[28..31]->NXM_NX_REG0[28..31],goto_table:1")
 
 	err = ofApp.Switch.DeleteTunnelTLVMap([]*openflow13.TLVTableMap{tlvMap})
-	require.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func TestGetMaskBytes(t *testing.T) {
@@ -1525,17 +1526,17 @@ func TestModPort(t *testing.T) {
 	portNo := 100
 	cmd := fmt.Sprintf("ovs-vsctl --may-exist add-port %s %s -- set Interface %s type=internal ofport_request=%d", brName, testPort, testPort, portNo)
 	err := exec.Command("/bin/bash", "-c", cmd).Run()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	time.Sleep(1 * time.Second)
 
 	cmd2 := fmt.Sprintf("ovs-vsctl get Interface %s mac_in_use", testPort)
 	macBytes, err := exec.Command("/bin/bash", "-c", cmd2).Output()
-	require.Nil(t, err)
+	require.NoError(t, err)
 	macStr := strings.TrimRight(string(macBytes), "\n")
 	macStr = strings.Trim(macStr, "\"")
 	mac, _ := net.ParseMAC(macStr)
 	err = app.Switch.DisableOFPortForwarding(portNo, mac)
-	require.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func TestCtMatch(t *testing.T) {
@@ -1747,11 +1748,11 @@ func testNXExtensionNote(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		MacSa:     &srcMac1,
 		IpSa:      &srcIP1,
 	})
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = flow1.Note(notes)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = flow1.Next(ofApp.nextTable)
-	require.Nil(t, err)
+	require.NoError(t, err)
 }
 
 func testNXExtensionLearn(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
@@ -1766,6 +1767,7 @@ func testNXExtensionLearn(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		MacSa:     &srcMac1,
 		IpSa:      &srcIP1,
 	})
+	require.NoError(t, err)
 
 	learn := &FlowLearn{
 		idleTimeout:    10,
@@ -1784,26 +1786,26 @@ func testNXExtensionLearn(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 
 	matchField1 := &LearnField{Start: 0, Name: "NXM_OF_IN_PORT"}
 	err = learn.AddMatch(matchField1, 16, nil, srcValue1)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	matchField2 := &LearnField{Start: 0, Name: "NXM_OF_ETH_DST"}
 	fromField2 := &LearnField{Start: 0, Name: "NXM_OF_ETH_SRC"}
 	err = learn.AddMatch(matchField2, 48, fromField2, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	loadField3 := &LearnField{Start: 0, Name: "NXM_NX_REG1"}
 	fromField3 := &LearnField{Start: 0, Name: "NXM_OF_IN_PORT"}
 	err = learn.AddLoadAction(loadField3, 16, fromField3, nil)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	loadField4 := &LearnField{Start: 0, Name: "NXM_OF_ETH_SRC"}
 	err = learn.AddLoadAction(loadField4, 48, nil, srcValue4)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	outputField5 := &LearnField{Start: 0, Name: "NXM_OF_IN_PORT"}
 	err = learn.AddOutputAction(outputField5, 16)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	err = flow1.Learn(learn)
-	require.Nil(t, err)
+	require.NoError(t, err)
 
 	err = flow1.Next(ofApp.nextTable)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	verifyFlowInstallAndDelete(t, flow1, ofApp.nextTable, brName, ofApp.inputTable.TableId,
 		"priority=100,ip,dl_src=22:22:11:11:11:11,nw_src=192.168.1.10",
 		"learn(table=2,idle_timeout=10,hard_timeout=20,fin_idle_timeout=2,fin_hard_timeout=4,priority=80,cookie=0x123456789abcdef0,in_port=99,NXM_OF_ETH_DST[]=NXM_OF_ETH_SRC[],load:NXM_OF_IN_PORT[]->NXM_NX_REG1[0..15],load:0xaaaaaabb->NXM_OF_ETH_SRC[],output:NXM_OF_IN_PORT[]),goto_table:1")
@@ -1946,6 +1948,7 @@ func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *test
 	}
 	tunDstAddr := net.ParseIP("192.168.1.100")
 	err = flow6.SetIPField(tunDstAddr, "TunDst")
+	require.NoError(t, err)
 	verifyFlowInstallAndDelete(t, flow6, ofApp.nextTable, brName, ofApp.inputTable.TableId,
 		"priority=100,in_port=6",
 		"set_field:192.168.1.100->tun_dst,goto_table:1")
@@ -2077,10 +2080,9 @@ func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *test
 		Ethertype: 0x0800,
 		NxRegs:    regs,
 	})
+	require.NoError(t, err)
 	err = flow11.ConnTrack(true, false, nil, nil)
-	if err != nil {
-		t.Errorf("Failed to apply dec_ttl action: %+v", err)
-	}
+	require.NoError(t, err, "Failed to apply dec_ttl action")
 	verifyFlowInstallAndDelete(t, flow11, ofApp.nextTable, brName, ofApp.inputTable.TableId,
 		"priority=100,ip,reg1=0x12/0xffff",
 		"ct(commit),goto_table:1")
@@ -2093,6 +2095,7 @@ func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *test
 		CtMark:     uint32(0x20),
 		CtMarkMask: &mask,
 	})
+	require.NoError(t, err)
 	verifyFlowInstallAndDelete(t, flow12, ofApp.nextTable, brName, ofApp.inputTable.TableId,
 		"priority=100,ct_mark=0x20/0x20,ip",
 		"goto_table:1")
@@ -2131,6 +2134,7 @@ func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *test
 		Ethertype: 0x0800,
 		InputPort: inPort8,
 	})
+	require.NoError(t, err)
 	verifyFlowInstallAndDelete(t, flow13, group1, brName, ofApp.inputTable.TableId,
 		"priority=100,ip,in_port=10",
 		"group:1")
@@ -2250,7 +2254,7 @@ func TestWriteactionsFlows(t *testing.T) {
 
 	rng1 := openflow13.NewNXRange(16, 16)
 	loadReg1, err := NewNXLoadAction("NXM_NX_REG0", uint64(1), rng1)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow1.ApplyActions([]OFAction{loadReg1})
 	outputAction1 := NewOutputPort(uint32(1))
 	flow1.WriteActions([]OFAction{outputAction1})
@@ -2290,7 +2294,7 @@ func TestWriteactionsFlows(t *testing.T) {
 	outputAction2 := NewOutputPort(uint32(1))
 	flow2.WriteActions([]OFAction{outputAction2})
 	flow2.Goto(ofApp.nextTable.TableId)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	verifyNewFlowInstallAndDelete(t, flow2, brName, ofApp.inputTable.TableId,
 		"priority=200,ip,nw_dst=172.30.0.0/24",
 		"dec_ttl,set_field:11:11:11:11:11:11->eth_src,set_field:aa:bb:cc:dd:ee:ff->eth_dst,load:0x1->NXM_NX_REG0[16],set_field:192.168.20.1->tun_dst,write_actions(output:1),goto_table:1")
@@ -2314,7 +2318,7 @@ func TestWriteactionsFlows(t *testing.T) {
 	outputAction3 := NewOutputPort(uint32(1))
 	flow3.WriteActions([]OFAction{outputAction3})
 	flow3.Goto(ofApp.nextTable.TableId)
-	require.Nil(t, err)
+	require.NoError(t, err)
 	verifyNewFlowInstallAndDelete(t, flow3, brName, ofApp.inputTable.TableId,
 		"priority=200,dl_dst=11:11:11:11:11:11",
 		"load:0x1->NXM_NX_REG0[16],write_actions(output:1),goto_table:1")
@@ -2331,7 +2335,7 @@ func TestWriteactionsFlows(t *testing.T) {
 	}
 
 	conjunction4, err := NewNXConjunctionAction(uint32(101), uint8(2), uint8(3))
-	require.Nil(t, err)
+	require.NoError(t, err)
 	flow4.ApplyActions([]OFAction{conjunction4})
 
 	verifyNewFlowInstallAndDelete(t, flow4, brName, ofApp.inputTable.TableId,

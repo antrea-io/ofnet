@@ -2,6 +2,7 @@ package ofctrl
 
 import (
 	"fmt"
+
 	"antrea.io/libOpenflow/openflow13"
 	"antrea.io/libOpenflow/util"
 )

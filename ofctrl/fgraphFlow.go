@@ -21,11 +21,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"antrea.io/libOpenflow/util"
 	"net"
 	"sync"
 
 	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/util"
 	log "github.com/sirupsen/logrus"
 )
 
