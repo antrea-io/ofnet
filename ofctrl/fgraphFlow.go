@@ -2019,7 +2019,8 @@ func (self *Flow) generateFlowMessage(commandType int) (flowMod *openflow13.Flow
 	log.Debugf("flow install: Match: %+v", flowMod.Match)
 	if commandType != openflow13.FC_DELETE && commandType != openflow13.FC_DELETE_STRICT {
 		if self.metadata != nil {
-			openflow13.NewInstrWriteMetadata(self.metadata.data, self.metadata.mask)
+			writeMdInstruction := openflow13.NewInstrWriteMetadata(self.metadata.data, self.metadata.mask)
+			flowMod.AddInstruction(writeMdInstruction)
 		}
 		if len(self.appliedActions) > 0 {
 			appiedInstruction := openflow13.NewInstrApplyActions()
