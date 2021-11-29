@@ -65,6 +65,8 @@ type FlowMatch struct {
 	CtTpDstPort   uint16               // Dest port in the transport layer in ct
 	Icmp6Code     *uint8               // ICMPv6 code
 	Icmp6Type     *uint8               // ICMPv6 type
+	Icmp4Code     *uint8               // ICMPv4 code
+	Icmp4Type     *uint8               // ICMPv4 type
 	NdTarget      *net.IP              // ICMPv6 Neighbor Discovery Target
 	NdTargetMask  *net.IP              // Mask for ICMPv6 Neighbor Discovery Target
 	NdSll         *net.HardwareAddr    // ICMPv6 Neighbor Discovery Source Ethernet Address
@@ -567,7 +569,7 @@ func (self *Flow) xlateMatch() openflow13.Match {
 	}
 
 	if self.Match.NdTll != nil {
-		ndTllField, _ := openflow13.FindFieldHeaderByName("NXM_NX_ND_SLL", false)
+		ndTllField, _ := openflow13.FindFieldHeaderByName("NXM_NX_ND_TLL", false)
 		ndTllField.Value = &openflow13.EthDstField{EthDst: *self.Match.NdTll}
 		ofMatch.AddField(*ndTllField)
 	}
@@ -580,6 +582,18 @@ func (self *Flow) xlateMatch() openflow13.Match {
 			pktMarkField.Mask = &openflow13.Uint32Message{Data: *self.Match.PktMarkMask}
 		}
 		ofMatch.AddField(*pktMarkField)
+	}
+
+	if self.Match.Icmp4Code != nil {
+		icmp4CodeField, _ := openflow13.FindFieldHeaderByName("NXM_OF_ICMP_CODE", false)
+		icmp4CodeField.Value = &openflow13.IcmpCodeField{Code: *self.Match.Icmp4Code}
+		ofMatch.AddField(*icmp4CodeField)
+	}
+
+	if self.Match.Icmp4Type != nil {
+		icmp4TypeField, _ := openflow13.FindFieldHeaderByName("NXM_OF_ICMP_TYPE", false)
+		icmp4TypeField.Value = &openflow13.IcmpTypeField{Type: *self.Match.Icmp4Type}
+		ofMatch.AddField(*icmp4TypeField)
 	}
 
 	return *ofMatch
