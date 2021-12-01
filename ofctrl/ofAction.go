@@ -37,6 +37,8 @@ const (
 	ActTypeSetNDTLL       = "setNDTLL"
 	ActTypeSetICMP6Type   = "setICMPv6Type"
 	ActTypeSetICMP6Code   = "setICMPv6Code"
+	ActTypeSetICMP4Type   = "setICMPv4Type"
+	ActTypeSetICMP4Code   = "setICMPv4Code"
 	ActTypeNXLoad         = "loadReg"
 	ActTypeNXMove         = "moveReg"
 	ActTypeNXCT           = "ct"
@@ -685,4 +687,40 @@ func (a *SetICMPv6CodeAction) GetActionMessage() openflow13.Action {
 
 func (a *SetICMPv6CodeAction) GetActionType() string {
 	return ActTypeSetICMP6Code
+}
+
+// Currently, we only support Flow.Send() function to generate
+// ICMP match/set flow message. We can also support Flow.Next()
+// function to generate ICMP match/set flow message in future once
+// libOpenflow support NewICMPXxxxField API.
+type SetICMPv4TypeAction struct {
+	Type uint8
+}
+
+func (a *SetICMPv4TypeAction) GetActionMessage() openflow13.Action {
+	field, _ := openflow13.FindFieldHeaderByName("NXM_OF_ICMP_TYPE", false)
+	field.Value = &openflow13.IcmpTypeField{Type: a.Type}
+	return openflow13.NewActionSetField(*field)
+}
+
+func (a *SetICMPv4TypeAction) GetActionType() string {
+	return ActTypeSetICMP4Type
+}
+
+// Currently, we only support Flow.Send() function to generate
+// ICMP match/set flow message. We can also support Flow.Next()
+// function to generate ICMP match/set flow message in future once
+// libOpenflow support NewICMPXxxxField API.
+type SetICMPv4CodeAction struct {
+	Code uint8
+}
+
+func (a *SetICMPv4CodeAction) GetActionMessage() openflow13.Action {
+	field, _ := openflow13.FindFieldHeaderByName("NXM_OF_ICMP_CODE", false)
+	field.Value = &openflow13.IcmpCodeField{Code: a.Code}
+	return openflow13.NewActionSetField(*field)
+}
+
+func (a *SetICMPv4CodeAction) GetActionType() string {
+	return ActTypeSetICMP4Code
 }
