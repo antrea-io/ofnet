@@ -131,7 +131,7 @@ func testPacketInOut(t *testing.T, ofApp *packetApp, brName string, ipv6 bool) {
 		},
 	}
 	flow0.ApplyActions([]OFAction{
-		NewResubmit(nil, &table1.TableId),
+		NewResubmit(nil, &table1.TableId, false),
 	})
 	flow0.Send(openflow13.FC_ADD)
 
