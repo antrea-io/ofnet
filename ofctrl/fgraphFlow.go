@@ -150,15 +150,8 @@ type writeMetadata struct {
 // could be calculated according to range automatically
 type NXRegister struct {
 	ID    int                 // ID of NXM_NX_REG, value should be from 0 to 15
-	Data  uint32              // Data to cache in register
-	Range *openflow13.NXRange // Range of bits in register
-}
-
-func (r *NXRegister) getShiftedValue() uint32 {
-	if r.Range == nil {
-		return r.Data
-	}
-	return r.Data << r.Range.GetOfs()
+	Data  uint32              // Data to cache in register. Note: Don't shift Data to its offset in caller
+	Mask  uint32              // Bitwise mask of data
 }
 
 type XXRegister struct {
@@ -425,7 +418,7 @@ func (self *Flow) xlateMatch() openflow13.Match {
 		}
 		for _, regs := range regMap {
 			reg := merge(regs)
-			regField := openflow13.NewRegMatchField(reg.ID, reg.Data, reg.Range)
+			regField := openflow13.NewRegMatchField(reg.ID, reg.Data, reg.Mask)
 			ofMatch.AddField(*regField)
 		}
 	}
@@ -603,27 +596,29 @@ func getRangeEnd(rng *openflow13.NXRange) uint16 {
 	return rng.GetOfs() + rng.GetNbits() - 1
 }
 
-func merge(regs []*NXRegister) *NXRegister {
-	if len(regs) == 1 {
-		return regs[0]
+func getOfsFromMask(mask uint32) uint8 {
+	var ofs uint8
+	if mask == 0 {
+		return 0
 	}
-	var data uint32
-	min := regs[0].Range.GetOfs()
-	max := getRangeEnd(regs[0].Range)
+	for mask & 1 == 0 {
+		ofs += 1
+		mask >>= 1
+	}
+	return ofs
+}
+
+func merge(regs []*NXRegister) *NXRegister {
+	var data, mask uint32
 	for _, reg := range regs {
-		data |= reg.Data << reg.Range.GetOfs()
-		end := getRangeEnd(reg.Range)
-		if reg.Range.GetOfs() < min {
-			min = reg.Range.GetOfs()
-		}
-		if end > max {
-			max = end
-		}
+		ofs := getOfsFromMask(reg.Mask)
+		mask |= reg.Mask
+		data |= reg.Data << ofs
 	}
 	return &NXRegister{
 		ID:    regs[0].ID,
 		Data:  data,
-		Range: openflow13.NewNXRange(int(min), int(max)),
+		Mask:  mask,
 	}
 }
 

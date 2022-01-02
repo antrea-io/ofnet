@@ -636,12 +636,12 @@ func TestMultiRangeOneReg(t *testing.T) {
 	reg01 := &NXRegister{
 		ID:    0,
 		Data:  uint32(0x1),
-		Range: openflow13.NewNXRange(2, 5),
+		Mask:  0x3c,
 	}
 	reg02 := &NXRegister{
 		ID:    0,
 		Data:  uint32(0xa),
-		Range: openflow13.NewNXRange(6, 9),
+		Mask:  0x3c0,
 	}
 
 	flow1 := &Flow{
@@ -662,12 +662,12 @@ func TestMultiRangeOneReg(t *testing.T) {
 	reg11 := &NXRegister{
 		ID:    1,
 		Data:  uint32(0x1),
-		Range: openflow13.NewNXRange(0, 3),
+		Mask:  0xf,
 	}
 	reg12 := &NXRegister{
 		ID:    1,
 		Data:  uint32(0xa),
-		Range: openflow13.NewNXRange(4, 7),
+		Mask:  0xf0,
 	}
 
 	flow2 := &Flow{
@@ -688,17 +688,17 @@ func TestMultiRangeOneReg(t *testing.T) {
 	reg21 := &NXRegister{
 		ID:    2,
 		Data:  uint32(0x1),
-		Range: openflow13.NewNXRange(2, 5),
+		Mask:  0x3c,
 	}
 	reg22 := &NXRegister{
 		ID:    2,
 		Data:  uint32(0xa),
-		Range: openflow13.NewNXRange(6, 9),
+		Mask:  0x3c0,
 	}
 	reg23 := &NXRegister{
 		ID:    2,
 		Data:  uint32(11),
-		Range: openflow13.NewNXRange(10, 13),
+		Mask:  0x3c00,
 	}
 
 	flow3 := &Flow{
@@ -1183,7 +1183,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	reg1 := &NXRegister{
 		ID:    2,
 		Data:  uint32(0x12),
-		Range: openflow13.NewNXRange(0, 15),
+		Mask:  0xffff,
 	}
 	var regs = []*NXRegister{reg1}
 	flow11 := &Flow{
@@ -1816,7 +1816,7 @@ func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *test
 	reg1 := &NXRegister{
 		ID:    1,
 		Data:  uint32(0x12),
-		Range: openflow13.NewNXRange(0, 15),
+		Mask:  0xffff,
 	}
 	var regs = []*NXRegister{reg1}
 	flow11, err := ofApp.inputTable.NewFlow(FlowMatch{
