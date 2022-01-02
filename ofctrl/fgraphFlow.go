@@ -98,7 +98,7 @@ type FlowMatch struct {
 
 // additional Actions in flow's instruction set
 type FlowAction struct {
-	ActionType    string               // Type of action "setVlan", "setMetadata"
+	ActionType    string               // Type of action "setVlan", "writeMetadata"
 	vlanId        uint16               // Vlan Id in case of "setVlan"
 	macAddr       net.HardwareAddr     // Mac address to set
 	mplsEtherType uint16               // mpls ether type to push or pop
@@ -106,7 +106,7 @@ type FlowAction struct {
 	l4Port        uint16               // Transport port to be set
 	arpOper       uint16               // Arp operation type to be set
 	tunnelId      uint64               // Tunnel Id (used for setting VNI)
-	metadata      uint64               // Metadata in case of "setMetadata"
+	metadata      uint64               // Metadata in case of "writeMetadata"
 	metadataMask  uint64               // Metadata mask
 	dscp          uint8                // DSCP field
 	loadAct       *NXLoadAction        // Load data into OXM/NXM fields, one or more Actions
@@ -843,12 +843,13 @@ func (self *Flow) installFlowActions(flowMod *openflow13.FlowMod,
 
 			log.Debugf("flow install. Added setTunnelId Action: %+v", setTunnelAction)
 
-		case "setMetadata":
-			// Set Metadata instruction
+		case ActTypeWriteMetadata:
+			// Write Metadata instruction
 			metadataInstr := openflow13.NewInstrWriteMetadata(flowAction.metadata, flowAction.metadataMask)
 
 			// Add the instruction to flowmod
 			flowMod.AddInstruction(metadataInstr)
+			log.Debugf("flow install. Added writeMetadata Action: %+v", metadataInstr)
 
 		case ActTypeSetSrcIP:
 			// Set IP src
@@ -1584,10 +1585,14 @@ func (self *Flow) SetL4Field(port uint16, field string) error {
 	return nil
 }
 
-// Special actions on the flow to set metadata
+// Special actions on the flow to write metadata.
+// By using this API, it will call `writeMetadata' instruction
+// to write metadata register in installFlowActions().
+// Instead, you can also use SetMetadataAction which uses
+// `set_field' to write metadata register.
 func (self *Flow) SetMetadata(metadata, metadataMask uint64) error {
 	action := new(FlowAction)
-	action.ActionType = "setMetadata"
+	action.ActionType = ActTypeWriteMetadata
 	action.metadata = metadata
 	action.metadataMask = metadataMask
 
