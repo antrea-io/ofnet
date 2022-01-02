@@ -7,6 +7,7 @@ import "antrea.io/libOpenflow/openflow13"
 type Resubmit struct {
 	ofport    uint16 // target ofport to resubmit
 	nextTable uint8  // target table to resubmit
+	withCT    bool   // with Conntrack action or not
 }
 
 // Fgraph element type for the Resubmit
@@ -24,14 +25,18 @@ func (self *Resubmit) GetFlowInstr() openflow13.Instruction {
 
 // Return a resubmit action (Used as a last action by flows in the table pipeline)
 func (self *Resubmit) GetActionMessage() openflow13.Action {
-	return openflow13.NewNXActionResubmitTableAction(self.ofport, self.nextTable)
+	if self.withCT {
+		return openflow13.NewNXActionResubmitTableCT(self.ofport, self.nextTable)
+	} else {
+		return openflow13.NewNXActionResubmitTableAction(self.ofport, self.nextTable)
+	}
 }
 
 func (self *Resubmit) GetActionType() string {
 	return ActTypeNXResubmit
 }
 
-func NewResubmit(inPort *uint16, table *uint8) *Resubmit {
+func NewResubmit(inPort *uint16, table *uint8, withCT bool) *Resubmit {
 	resubmit := new(Resubmit)
 	if inPort == nil {
 		resubmit.ofport = openflow13.OFPP_IN_PORT
@@ -43,5 +48,6 @@ func NewResubmit(inPort *uint16, table *uint8) *Resubmit {
 	} else {
 		resubmit.nextTable = *table
 	}
+	resubmit.withCT = withCT
 	return resubmit
 }

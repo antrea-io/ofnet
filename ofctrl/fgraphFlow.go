@@ -1681,9 +1681,9 @@ func (self *Flow) MoveRegs(srcName string, dstName string, srcRange *openflow13.
 	return nil
 }
 
-func (self *Flow) Resubmit(ofPort uint16, tableID uint8) error {
+func (self *Flow) Resubmit(ofPort uint16, tableID uint8, withCT bool) error {
 	action := new(FlowAction)
-	action.resubmit = NewResubmit(&ofPort, &tableID)
+	action.resubmit = NewResubmit(&ofPort, &tableID, withCT)
 	action.ActionType = action.resubmit.GetActionType()
 	self.lock.Lock()
 	defer self.lock.Unlock()

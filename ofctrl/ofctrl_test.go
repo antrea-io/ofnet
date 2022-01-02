@@ -1119,8 +1119,8 @@ func TestNewFlowActionAPIs(t *testing.T) {
 	table2 := uint8(2)
 	flow8.ApplyActions([]OFAction{
 		conntrack,
-		NewResubmit(nil, &ofActor.nextTable.TableId),
-		NewResubmit(nil, &table2),
+		NewResubmit(nil, &ofActor.nextTable.TableId, false),
+		NewResubmit(nil, &table2, false),
 	})
 	verifyNewFlowInstallAndDelete(t, flow8, brName, ofActor.inputTable.TableId,
 		"priority=100,ip,in_port=108",
@@ -1195,7 +1195,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 		},
 	}
 	conntrack4 := NewNXConnTrackAction(true, false, nil, nil)
-	flow11.ApplyActions([]OFAction{conntrack4, NewResubmit(nil, &ofActor.nextTable.TableId)})
+	flow11.ApplyActions([]OFAction{conntrack4, NewResubmit(nil, &ofActor.nextTable.TableId, false)})
 	verifyNewFlowInstallAndDelete(t, flow11, brName, ofActor.inputTable.TableId,
 		"priority=100,ip,reg2=0x12/0xffff",
 		"ct(commit),resubmit(,1)")
