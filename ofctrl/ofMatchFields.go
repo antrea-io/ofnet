@@ -700,6 +700,7 @@ func getNXReg(mf *openflow13.MatchField) (*NXRegister, error) {
 		}
 		rng := getNXRangeFromUint32Mask(maskData)
 		reg.Range = rng
+		reg.Mask = maskData
 	}
 	return reg, nil
 }
