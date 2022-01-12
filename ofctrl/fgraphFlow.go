@@ -72,6 +72,7 @@ type FlowMatch struct {
 	NdTargetMask  *net.IP              // Mask for ICMPv6 Neighbor Discovery Target
 	NdSll         *net.HardwareAddr    // ICMPv6 Neighbor Discovery Source Ethernet Address
 	NdTll         *net.HardwareAddr    // ICMPv6 Neighbor DIscovery Target Ethernet Address
+	IpTtl         *uint8               // IPV4 TTL
 	Metadata      *uint64              // OVS metadata
 	MetadataMask  *uint64              // Metadata mask
 	TunnelId      uint64               // Vxlan Tunnel id i.e. VNI
@@ -573,6 +574,12 @@ func (self *Flow) xlateMatch() openflow13.Match {
 		ndTllField, _ := openflow13.FindFieldHeaderByName("NXM_NX_ND_TLL", false)
 		ndTllField.Value = &openflow13.EthDstField{EthDst: *self.Match.NdTll}
 		ofMatch.AddField(*ndTllField)
+	}
+
+	if self.Match.IpTtl != nil {
+		ipTtlField, _ := openflow13.FindFieldHeaderByName("NXM_NX_IP_TTL", false)
+		ipTtlField.Value = &openflow13.TtlField{Ttl: *self.Match.IpTtl}
+		ofMatch.AddField(*ipTtlField)
 	}
 
 	// Handle pkt_mark match
