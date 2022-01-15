@@ -447,7 +447,7 @@ func (self *Flow) xlateMatch() openflow13.Match {
 		ofMatch.AddField(*ctMarkField)
 	}
 
-	if self.Match.CtLabelHi != 0 || self.Match.CtLabelLo != 0 {
+	if self.Match.CtLabelHiMask != 0 || self.Match.CtLabelLoMask != 0 || self.Match.CtLabelHi != 0 || self.Match.CtLabelLo != 0 {
 		var buf [16]byte
 		binary.BigEndian.PutUint64(buf[:8], self.Match.CtLabelHi)
 		binary.BigEndian.PutUint64(buf[8:], self.Match.CtLabelLo)
