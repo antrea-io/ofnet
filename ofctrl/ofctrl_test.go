@@ -1126,7 +1126,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 		"priority=100,ip,in_port=108",
 		"ct(commit,table=1,zone=65281,exec(load:0xf009->NXM_NX_CT_MARK[])),resubmit(,1),resubmit(,2)")
 
-	// Test action: ct(table=1,zone=0xff01,nat)
+	// Test action: ct(table=1,zone=NXM_NX_REG1[0..15],nat)
 	flow80 := &Flow{
 		Table: ofActor.inputTable,
 		Match: FlowMatch{
@@ -1135,13 +1135,15 @@ func TestNewFlowActionAPIs(t *testing.T) {
 			InputPort: inPort6,
 		},
 	}
+	ctZoneFieldName := "NXM_NX_REG1"
+	ctZoneFieldRange := openflow13.NewNXRange(0, 15)
 	natAction0 := openflow13.NewNXActionCTNAT()
-	conntrack2 := NewNXConnTrackAction(false, false, &ctTable, &ctZone, natAction0)
+	conntrack2 := NewNXConnTrackActionWithZoneField(false, false, &ctTable, nil, ctZoneFieldName, ctZoneFieldRange, natAction0)
 	flow80.ApplyActions([]OFAction{conntrack2})
 	flow80.Goto(ofActor.nextTable.TableId)
 	verifyNewFlowInstallAndDelete(t, flow80, brName, ofActor.inputTable.TableId,
 		"priority=100,ip,in_port=108",
-		"ct(table=1,zone=65281,nat),goto_table:1")
+		"ct(table=1,zone=NXM_NX_REG1[0..15],nat),goto_table:1")
 	// Test action: dec_ttl
 	inPort7 := uint32(109)
 	flow9 := &Flow{

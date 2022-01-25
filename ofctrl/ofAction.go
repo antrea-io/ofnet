@@ -500,11 +500,13 @@ func NewNXMoveAction(srcName string, dstName string, srcRange *openflow13.NXRang
 }
 
 type NXConnTrackAction struct {
-	commit  bool
-	force   bool
-	table   *uint8
-	zone    *uint16
-	actions []openflow13.Action
+	commit       bool
+	force        bool
+	table        *uint8
+	zoneImm      *uint16
+	zoneSrcField *openflow13.MatchField
+	zoneSrcRange *openflow13.NXRange
+	actions      []openflow13.Action
 }
 
 func (a *NXConnTrackAction) GetActionMessage() openflow13.Action {
@@ -518,8 +520,10 @@ func (a *NXConnTrackAction) GetActionMessage() openflow13.Action {
 	if a.table != nil {
 		ctAction.Table(*a.table)
 	}
-	if a.zone != nil {
-		ctAction.ZoneImm(*a.zone)
+	if a.zoneSrcField != nil {
+		ctAction.ZoneRange(a.zoneSrcField, a.zoneSrcRange)
+	} else if a.zoneImm != nil {
+		ctAction.ZoneImm(*a.zoneImm)
 	}
 	if a.actions != nil {
 		ctAction = ctAction.AddAction(a.actions...)
@@ -531,13 +535,33 @@ func (a *NXConnTrackAction) GetActionType() string {
 	return ActTypeNXCT
 }
 
+// This function only support immediate number for ct_zone
 func NewNXConnTrackAction(commit bool, force bool, table *uint8, zone *uint16, actions ...openflow13.Action) *NXConnTrackAction {
 	return &NXConnTrackAction{
 		commit:  commit,
 		force:   force,
 		table:   table,
-		zone:    zone,
+		zoneImm: zone,
 		actions: actions,
+	}
+}
+
+// This function support immediate number and field or subfield for ct_zone
+func NewNXConnTrackActionWithZoneField(commit bool, force bool, table *uint8, zoneImm *uint16, zoneSrcFieldName string, zoneSrcRange *openflow13.NXRange, actions ...openflow13.Action) *NXConnTrackAction {
+	var zoneSrc *openflow13.MatchField
+	var zoneSrcRng *openflow13.NXRange
+	if zoneSrcFieldName != "" {
+		zoneSrc, _ = openflow13.FindFieldHeaderByName(zoneSrcFieldName, true)
+		zoneSrcRng = zoneSrcRange
+	}
+	return &NXConnTrackAction{
+		commit:       commit,
+		force:        force,
+		table:        table,
+		zoneImm:      zoneImm,
+		zoneSrcField: zoneSrc,
+		zoneSrcRange: zoneSrcRng,
+		actions:      actions,
 	}
 }
 

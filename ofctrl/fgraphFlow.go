@@ -1716,7 +1716,7 @@ func (self *Flow) ConnTrack(commit bool, force bool, tableID *uint8, zoneID *uin
 		commit:  commit,
 		force:   force,
 		table:   tableID,
-		zone:    zoneID,
+		zoneImm: zoneID,
 		actions: execActions,
 	}
 	action := new(FlowAction)
