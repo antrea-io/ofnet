@@ -9,6 +9,7 @@ import (
 )
 
 const (
+	ActTypePushVlan       = "pushVlan"
 	ActTypeSetVlan        = "setVlan"
 	ActTypePopVlan        = "popVlan"
 	ActTypeSetDstMac      = "setMacDa"
@@ -56,6 +57,18 @@ const (
 type OFAction interface {
 	GetActionMessage() openflow13.Action
 	GetActionType() string
+}
+
+type PushVLANAction struct {
+	etherType uint16
+}
+
+func (a *PushVLANAction) GetActionMessage() openflow13.Action {
+	return openflow13.NewActionPushVlan(a.etherType)
+}
+
+func (a *PushVLANAction) GetActionType() string {
+	return ActTypePushVlan
 }
 
 type SetVLANAction struct {
