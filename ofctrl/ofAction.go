@@ -500,11 +500,13 @@ func NewNXMoveAction(srcName string, dstName string, srcRange *openflow13.NXRang
 }
 
 type NXConnTrackAction struct {
-	commit  bool
-	force   bool
-	table   *uint8
-	zone    *uint16
-	actions []openflow13.Action
+	commit    bool
+	force     bool
+	table     *uint8
+	zone      *uint16
+	zoneField *openflow13.MatchField
+	zoneRange *openflow13.NXRange
+	actions   []openflow13.Action
 }
 
 func (a *NXConnTrackAction) GetActionMessage() openflow13.Action {
@@ -520,6 +522,8 @@ func (a *NXConnTrackAction) GetActionMessage() openflow13.Action {
 	}
 	if a.zone != nil {
 		ctAction.ZoneImm(*a.zone)
+	} else if a.zoneField != nil {
+		ctAction.ZoneRange(a.zoneField, a.zoneRange)
 	}
 	if a.actions != nil {
 		ctAction = ctAction.AddAction(a.actions...)
@@ -538,6 +542,17 @@ func NewNXConnTrackAction(commit bool, force bool, table *uint8, zone *uint16, a
 		table:   table,
 		zone:    zone,
 		actions: actions,
+	}
+}
+
+func NewZoneRangeNXConnTrackAction(commit bool, force bool, table *uint8, zoneField *openflow13.MatchField, zoneRange *openflow13.NXRange, actions ...openflow13.Action) *NXConnTrackAction {
+	return &NXConnTrackAction{
+		commit:    commit,
+		force:     force,
+		table:     table,
+		zoneField: zoneField,
+		zoneRange: zoneRange,
+		actions:   actions,
 	}
 }
 
