@@ -60,11 +60,11 @@ type OFAction interface {
 }
 
 type PushVLANAction struct {
-	etherType uint16
+	EtherType uint16
 }
 
 func (a *PushVLANAction) GetActionMessage() openflow13.Action {
-	return openflow13.NewActionPushVlan(a.etherType)
+	return openflow13.NewActionPushVlan(a.EtherType)
 }
 
 func (a *PushVLANAction) GetActionType() string {
