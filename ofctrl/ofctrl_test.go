@@ -232,9 +232,10 @@ func TestCreateDeleteFlow(t *testing.T) {
 
 	// create mac flow
 	macAddr, _ := net.ParseMAC("02:01:01:01:01:01")
+	vlanId := uint16(1)
 	macFlow, err := ofActor.nextTable.NewFlow(FlowMatch{
 		Priority: 100,
-		VlanId:   1,
+		VlanId:   &vlanId,
 		MacDa:    &macAddr,
 	})
 	assert.NoError(t, err, "Error creating mac flow")
