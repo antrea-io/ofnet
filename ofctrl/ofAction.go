@@ -481,8 +481,8 @@ func NewNXMoveAction(srcName string, dstName string, srcRange *openflow13.NXRang
 	if err != nil {
 		return nil, err
 	}
-	dstNBits := srcRange.GetNbits()
-	dstOfs := srcRange.GetOfs()
+	dstNBits := dstRange.GetNbits()
+	dstOfs := dstRange.GetOfs()
 	dstField, err := openflow13.FindFieldHeaderByName(dstName, false)
 	if err != nil {
 		return nil, err
