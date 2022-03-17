@@ -1,5 +1,5 @@
-antrea.io/libOpenflow v0.6.2 h1:1JMSJ7Lp7yOhKybHey9VDtRI6JuIgkhUWJBX5GIFY9I=
-antrea.io/libOpenflow v0.6.2/go.mod h1:CzEJZxDNAupiGxeL5VOw92PsxfyvehEAvE3PiC6gr8o=
+antrea.io/libOpenflow v0.7.1 h1:KJQ4ez7JCXLCTeaz4gPzk27HK4zOXczMa9c2Ud/QAnk=
+antrea.io/libOpenflow v0.7.1/go.mod h1:CzEJZxDNAupiGxeL5VOw92PsxfyvehEAvE3PiC6gr8o=
 github.com/Microsoft/go-winio v0.4.14 h1:+hMXMk01us9KgxGb7ftKQt2Xpf5hH/yky+TDA+qxleU=
 github.com/Microsoft/go-winio v0.4.14/go.mod h1:qXqCSQ3Xa7+6tgxaGTIe4Kpcdsi+P8jBhyzoq1bpyYA=
 github.com/cenkalti/hub v1.0.1-0.20140529221144-7be60e186e66 h1:mqwgWF7yBJ/zOFlWZk84IRFG/FhMG0f7aZWvcTx/JHA=
