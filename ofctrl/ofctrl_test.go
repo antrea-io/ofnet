@@ -214,6 +214,52 @@ func TestTableCreateDelete(t *testing.T) {
 	}
 }
 
+func TestPushMplsFlow(t *testing.T) {
+	inPortFlow, err := ofActor.inputTable.NewFlow(FlowMatch{
+		Priority:  100,
+		InputPort: 1,
+	})
+	assert.NoError(t, err, "Error creating inport flow")
+
+	// push mpls and install it
+	inPortFlow.PushMpls(0x8847)
+	err = inPortFlow.Next(ofActor.nextTable)
+	assert.NoError(t, err, "Error installing inport flow")
+
+	// verify push mpls action exists
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,in_port=1", "push_mpls:0x8847,goto_table:1"), "in port flow not found in OVS.")
+
+	// delete the flow
+	err = inPortFlow.Delete()
+	assert.NoError(t, err, "Error deleting the inPort flow")
+
+	// Make sure they are really gone
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,in_port=1", "push_mpls:0x8847,goto_table:1"), "in port flow still found in OVS after deleting it.")
+}
+
+func TestPopMplsFlow(t *testing.T) {
+	mplsFlow, err := ofActor.inputTable.NewFlow(FlowMatch{
+		Priority:  100,
+		Ethertype: 0x8847,
+	})
+	assert.NoError(t, err, "Error creating inport flow")
+
+	// pop mpls and install it
+	mplsFlow.PopMpls(0x0800)
+	err = mplsFlow.Next(ofActor.nextTable)
+	assert.NoError(t, err, "Error installing inport flow")
+
+	// verify pop mpls action exists
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,mpls", "pop_mpls:0x0800,goto_table:1"), "mpls flow not found in OVS.")
+
+	// delete the flow
+	err = mplsFlow.Delete()
+	assert.NoError(t, err, "Error deleting the inPort flow")
+
+	// Make sure they are really gone
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,mpls", "pop_mpls:0x0800,goto_table:1"), "mpls flow still found in OVS after deleting it.")
+}
+
 func TestCreateDeleteFlow(t *testing.T) {
 	inPortFlow, err := ofActor.inputTable.NewFlow(FlowMatch{
 		Priority:  100,

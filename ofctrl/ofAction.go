@@ -12,6 +12,8 @@ const (
 	ActTypePushVlan       = "pushVlan"
 	ActTypeSetVlan        = "setVlan"
 	ActTypePopVlan        = "popVlan"
+	ActTypePopMpls        = "popMpls"
+	ActTypePushMpls       = "pushMpls"
 	ActTypeSetDstMac      = "setMacDa"
 	ActTypeSetSrcMac      = "setMacSa"
 	ActTypeSetTunnelID    = "setTunnelId"
@@ -82,6 +84,30 @@ func (a *SetVLANAction) GetActionMessage() openflow13.Action {
 
 func (a *SetVLANAction) GetActionType() string {
 	return ActTypeSetVlan
+}
+
+type PopMPLSAction struct {
+	EtherType uint16
+}
+
+func (a *PopMPLSAction) GetActionMessage() openflow13.Action {
+	return openflow13.NewActionPopMpls(a.EtherType)
+}
+
+func (a *PopMPLSAction) GetActionType() string {
+	return ActTypePopMpls
+}
+
+type PushMPLSAction struct {
+	EtherType uint16
+}
+
+func (a *PushMPLSAction) GetActionMessage() openflow13.Action {
+	return openflow13.NewActionPushMpls(a.EtherType)
+}
+
+func (a *PushMPLSAction) GetActionType() string {
+	return ActTypePushMpls
 }
 
 type PopVLANAction struct {

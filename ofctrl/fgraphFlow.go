@@ -98,21 +98,22 @@ type FlowMatch struct {
 
 // additional Actions in flow's instruction set
 type FlowAction struct {
-	ActionType   string               // Type of action "setVlan", "setMetadata"
-	vlanId       uint16               // Vlan Id in case of "setVlan"
-	macAddr      net.HardwareAddr     // Mac address to set
-	ipAddr       net.IP               // IP address to be set
-	l4Port       uint16               // Transport port to be set
-	arpOper      uint16               // Arp operation type to be set
-	tunnelId     uint64               // Tunnel Id (used for setting VNI)
-	metadata     uint64               // Metadata in case of "setMetadata"
-	metadataMask uint64               // Metadata mask
-	dscp         uint8                // DSCP field
-	loadAct      *NXLoadAction        // Load data into OXM/NXM fields, one or more Actions
-	moveAct      *NXMoveAction        // Move data from src OXM/NXM field to dst field
-	conjunction  *NXConjunctionAction // AddConjunction Actions to be set
-	connTrack    *NXConnTrackAction   // ct Actions to be set
-	resubmit     *Resubmit            // resubmit packet to a specific Table and port. Resubmit could also be a NextElem.
+	ActionType    string               // Type of action "setVlan", "setMetadata"
+	vlanId        uint16               // Vlan Id in case of "setVlan"
+	macAddr       net.HardwareAddr     // Mac address to set
+	mplsEtherType uint16               // mpls ether type to push or pop
+	ipAddr        net.IP               // IP address to be set
+	l4Port        uint16               // Transport port to be set
+	arpOper       uint16               // Arp operation type to be set
+	tunnelId      uint64               // Tunnel Id (used for setting VNI)
+	metadata      uint64               // Metadata in case of "setMetadata"
+	metadataMask  uint64               // Metadata mask
+	dscp          uint8                // DSCP field
+	loadAct       *NXLoadAction        // Load data into OXM/NXM fields, one or more Actions
+	moveAct       *NXMoveAction        // Move data from src OXM/NXM field to dst field
+	conjunction   *NXConjunctionAction // AddConjunction Actions to be set
+	connTrack     *NXConnTrackAction   // ct Actions to be set
+	resubmit      *Resubmit            // resubmit packet to a specific Table and port. Resubmit could also be a NextElem.
 	// If the packet is resubmitted to multiple ports, use resubmit as a FlowAction
 	// and the NextElem should be Empty.
 	learn      *FlowLearn    // nxm learn action
@@ -774,6 +775,32 @@ func (self *Flow) installFlowActions(flowMod *openflow13.FlowMod,
 
 			log.Debugf("flow install. Added popVlan action: %+v", popVlan)
 
+		case ActTypePushMpls:
+			// Create push mpls action
+			pushMpls := (&PushMPLSAction{EtherType: flowAction.mplsEtherType}).GetActionMessage()
+
+			// Add it to instruction
+			err = actInstr.AddAction(pushMpls, true)
+			if err != nil {
+				return err
+			}
+			addActn = true
+
+			log.Debugf("flow install. Added pushMpls action: %+v", pushMpls)
+
+		case ActTypePopMpls:
+			// Create pop mpls action
+			popMpls := (&PopMPLSAction{EtherType: flowAction.mplsEtherType}).GetActionMessage()
+
+			// Add it to instruction
+			err = actInstr.AddAction(popMpls, true)
+			if err != nil {
+				return err
+			}
+			addActn = true
+
+			log.Debugf("flow install. Added popMpls action: %+v", popMpls)
+
 		case ActTypeSetDstMac:
 			// Set Outer MacDA field
 			macDaField := openflow13.NewEthDstField(flowAction.macAddr, nil)
@@ -1350,6 +1377,46 @@ func (self *Flow) SetVlan(vlanId uint16) error {
 func (self *Flow) PopVlan() error {
 	action := new(FlowAction)
 	action.ActionType = ActTypePopVlan
+
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	// Add to the action db
+	self.flowActions = append(self.flowActions, action)
+
+	// If the flow entry was already installed, re-install it
+	if self.isInstalled {
+		return self.install()
+	}
+
+	return nil
+}
+
+// Special action on the flow to pop mpls ethertype
+func (self *Flow) PopMpls(etherType uint16) error {
+	action := new(FlowAction)
+	action.ActionType = ActTypePopMpls
+	action.mplsEtherType = etherType
+
+	self.lock.Lock()
+	defer self.lock.Unlock()
+
+	// Add to the action db
+	self.flowActions = append(self.flowActions, action)
+
+	// If the flow entry was already installed, re-install it
+	if self.isInstalled {
+		return self.install()
+	}
+
+	return nil
+}
+
+// Special action on the flow to push mpls ethertype
+func (self *Flow) PushMpls(etherType uint16) error {
+	action := new(FlowAction)
+	action.ActionType = ActTypePushMpls
+	action.mplsEtherType = etherType
 
 	self.lock.Lock()
 	defer self.lock.Unlock()
