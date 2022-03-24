@@ -19,7 +19,7 @@ package ofctrl
 import (
 	"errors"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 )
 
 // Initialize the fgraph elements on the switch
@@ -40,26 +40,26 @@ func (self *OFSwitch) initFgraph() error {
 	// Create drop action
 	dropAction := new(Output)
 	dropAction.outputType = "drop"
-	dropAction.portNo = openflow13.P_ANY
+	dropAction.portNo = openflow15.P_ANY
 	self.dropAction = dropAction
 
 	// create send to controller action
 	sendToCtrler := new(Output)
 	sendToCtrler.outputType = "toController"
-	sendToCtrler.portNo = openflow13.P_CONTROLLER
+	sendToCtrler.portNo = openflow15.P_CONTROLLER
 	self.sendToCtrler = sendToCtrler
 
 	// Create normal lookup action.
 	normalLookup := new(Output)
 	normalLookup.outputType = "normal"
-	normalLookup.portNo = openflow13.P_NORMAL
+	normalLookup.portNo = openflow15.P_NORMAL
 	self.normalLookup = normalLookup
 
 	// Clear all existing flood lists
-	groupMod := openflow13.NewGroupMod()
-	groupMod.GroupId = openflow13.OFPG_ALL
-	groupMod.Command = openflow13.OFPGC_DELETE
-	groupMod.Type = openflow13.OFPGT_ALL
+	groupMod := openflow15.NewGroupMod()
+	groupMod.GroupId = openflow15.OFPG_ALL
+	groupMod.Command = openflow15.OFPGC_DELETE
+	groupMod.Type = openflow15.GT_ALL
 	return self.Send(groupMod)
 }
 

@@ -6,7 +6,7 @@ import (
 	"math/rand"
 	"net"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/protocol"
 	"antrea.io/libOpenflow/util"
 )
@@ -28,16 +28,27 @@ type PacketOut struct {
 }
 
 func (p *PacketOut) GetMessage() util.Message {
-	packetOut := openflow13.NewPacketOut()
-	packetOut.InPort = p.InPort
+	packetOut := openflow15.NewPacketOut()
+
+	var inPort uint32
+	if p.InPort != 0 {
+		inPort = p.InPort
+	} else {
+		inPort = openflow15.P_CONTROLLER
+	}
+
+	packetOut.Match = *openflow15.NewMatch()
+	inportField := openflow15.NewInPortField(inPort)
+	packetOut.Match.AddField(*inportField)
+
 	for _, act := range p.Actions {
 		packetOut.AddAction(act.GetActionMessage())
 	}
 	packetOut.Data = p.getEthernetHeader()
 	if p.OutPort > 0 {
-		packetOut.AddAction(openflow13.NewActionOutput(p.OutPort))
+		packetOut.AddAction(openflow15.NewActionOutput(p.OutPort))
 	} else {
-		packetOut.AddAction(openflow13.NewActionOutput(openflow13.P_TABLE))
+		packetOut.AddAction(openflow15.NewActionOutput(openflow15.P_TABLE))
 	}
 	return packetOut
 }

@@ -17,7 +17,7 @@ package ofctrl
 // This file defines the forwarding graph API
 
 import (
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 )
 
 // This implements a forwarding graph.
@@ -132,5 +132,5 @@ type FgraphElem interface {
 	// Returns the formatted instruction set.
 	// This is used by the previous Fgraph element to install instruction set
 	// in the flow entry
-	GetFlowInstr() openflow13.Instruction
+	GetFlowInstr() openflow15.Instruction
 }

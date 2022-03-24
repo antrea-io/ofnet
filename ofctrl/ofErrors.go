@@ -3,7 +3,7 @@ package ofctrl
 import (
 	"fmt"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/util"
 )
 
@@ -257,53 +257,49 @@ func GetErrorMessage(errType, errCode uint16, vendor uint32) string {
 func GetErrorMessageType(errData util.Buffer) string {
 	msgType := errData.Bytes()[1]
 	switch msgType {
-	case openflow13.Type_Hello:
+	case openflow15.Type_Hello:
 		return "OFPT_HELLO"
-	case openflow13.Type_Error:
+	case openflow15.Type_Error:
 		return "OFPT_ERROR"
-	case openflow13.Type_EchoRequest:
+	case openflow15.Type_EchoRequest:
 		return "OFPT_ECHO_REQUEST"
-	case openflow13.Type_EchoReply:
+	case openflow15.Type_EchoReply:
 		return "OFPT_ECHO_REPLY"
-	case openflow13.Type_Experimenter:
+	case openflow15.Type_Experimenter:
 		return "OFPT_EXPERIMENTER"
-	case openflow13.Type_FeaturesRequest:
+	case openflow15.Type_FeaturesRequest:
 		return "OFPT_FEATURES_REQUEST"
-	case openflow13.Type_FeaturesReply:
+	case openflow15.Type_FeaturesReply:
 		return "OFPT_FEATURES_REPLY"
-	case openflow13.Type_GetConfigRequest:
+	case openflow15.Type_GetConfigRequest:
 		return "OFPT_GET_CONFIG_REQUEST"
-	case openflow13.Type_GetConfigReply:
+	case openflow15.Type_GetConfigReply:
 		return "OFPT_GET_CONFIG_REPLY"
-	case openflow13.Type_SetConfig:
+	case openflow15.Type_SetConfig:
 		return "OFPT_SET_CONFIG"
-	case openflow13.Type_PacketIn:
+	case openflow15.Type_PacketIn:
 		return "OFPT_PACKET_IN"
-	case openflow13.Type_FlowRemoved:
+	case openflow15.Type_FlowRemoved:
 		return "OFPT_FLOW_REMOVED"
-	case openflow13.Type_PortStatus:
+	case openflow15.Type_PortStatus:
 		return "OFPT_PORT_STATUS"
-	case openflow13.Type_PacketOut:
+	case openflow15.Type_PacketOut:
 		return "OFPT_PACKET_OUT"
-	case openflow13.Type_FlowMod:
+	case openflow15.Type_FlowMod:
 		return "OFPT_FLOW_MOD"
-	case openflow13.Type_GroupMod:
+	case openflow15.Type_GroupMod:
 		return "OFPT_GROUP_MOD"
-	case openflow13.Type_PortMod:
+	case openflow15.Type_PortMod:
 		return "OFPT_PORT_MOD"
-	case openflow13.Type_TableMod:
+	case openflow15.Type_TableMod:
 		return "OFPT_TABLE_MOD"
-	case openflow13.Type_BarrierRequest:
+	case openflow15.Type_BarrierRequest:
 		return "OFPT_BARRIER_REQUEST"
-	case openflow13.Type_BarrierReply:
+	case openflow15.Type_BarrierReply:
 		return "OFPT_BARRIER_REPLY"
-	case openflow13.Type_QueueGetConfigRequest:
-		return "OFPT_QUEUE_GET_CONFIG_REQUEST"
-	case openflow13.Type_QueueGetConfigReply:
-		return "OFPT_QUEUE_GET_CONFIG_REPLY"
-	case openflow13.Type_MultiPartRequest:
+	case openflow15.Type_MultiPartRequest:
 		return "OFPT_MULTIPART_REQUEST"
-	case openflow13.Type_MultiPartReply:
+	case openflow15.Type_MultiPartReply:
 		return "OFPT_MULTIPART_REPLY"
 	default:
 		return "Unknown message type"

@@ -15,7 +15,7 @@ limitations under the License.
 
 package ofctrl
 
-// This library implements a simple openflow 1.3 controller
+// This library implements a simple openflow 1.5 controller
 
 import (
 	"fmt"
@@ -26,13 +26,13 @@ import (
 	"time"
 
 	"antrea.io/libOpenflow/common"
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/util"
 
 	log "github.com/sirupsen/logrus"
 )
 
-type PacketIn openflow13.PacketIn
+type PacketIn openflow15.PacketIn
 
 // Note: Command to make ovs connect to controller:
 // ovs-vsctl set-controller <bridge-name> tcp:<ip-addr>:<port>
@@ -53,7 +53,7 @@ type AppInterface interface {
 	PacketRcvd(sw *OFSwitch, pkt *PacketIn)
 
 	// Controller received a multi-part reply from the switch
-	MultipartReply(sw *OFSwitch, rep *openflow13.MultipartReply)
+	MultipartReply(sw *OFSwitch, rep *openflow15.MultipartReply)
 }
 
 type ConnectionRetryControl interface {
@@ -247,8 +247,8 @@ func (c *Controller) handleConnection(conn net.Conn) {
 
 	log.Println("New connection..")
 
-	// Send ofp 1.3 Hello by default
-	h, err := common.NewHello(4)
+	// Send ofp 1.5 Hello by default
+	h, err := common.NewHello(6)
 	if err != nil {
 		return
 	}
@@ -257,7 +257,6 @@ func (c *Controller) handleConnection(conn net.Conn) {
 
 	for {
 		select {
-		// Send hello message with latest protocol version.
 		case msg := <-stream.Inbound:
 			switch m := msg.(type) {
 			// A Hello message of the appropriate type
@@ -265,14 +264,14 @@ func (c *Controller) handleConnection(conn net.Conn) {
 			// types are incompatible, it is possible the
 			// connection may be servered without error.
 			case *common.Hello:
-				if m.Version == openflow13.VERSION {
-					log.Infoln("Received Openflow 1.3 Hello message")
+				if m.Version == openflow15.VERSION {
+					log.Infoln("Received Openflow 1.5 Hello message")
 					// Version negotiation is
 					// considered complete. Create
 					// new Switch and notifiy listening
 					// applications.
 					stream.Version = m.Version
-					stream.Outbound <- openflow13.NewFeaturesRequest()
+					stream.Outbound <- openflow15.NewFeaturesRequest()
 				} else {
 					// Connection should be severed if controller
 					// doesn't support switch version.
@@ -282,8 +281,8 @@ func (c *Controller) handleConnection(conn net.Conn) {
 			// After a vaild FeaturesReply has been received we
 			// have all the information we need. Create a new
 			// switch object and notify applications.
-			case *openflow13.SwitchFeatures:
-				log.Printf("Received ofp1.3 Switch feature response: %+v", *m)
+			case *openflow15.SwitchFeatures:
+				log.Printf("Received ofp1.5 Switch feature response: %+v", *m)
 
 				// Create a new switch and handover the stream
 				var reConnChan chan int = nil
@@ -297,7 +296,7 @@ func (c *Controller) handleConnection(conn net.Conn) {
 
 			// An error message may indicate a version mismatch. We
 			// disconnect if an error occurs this early.
-			case *openflow13.ErrorMsg:
+			case *openflow15.ErrorMsg:
 				log.Warnf("Received OpenFlow error msg: %+v", *m)
 				stream.Shutdown <- true
 			}
@@ -320,8 +319,8 @@ func (c *Controller) handleConnection(conn net.Conn) {
 // Demux based on message version
 func (c *Controller) Parse(b []byte) (message util.Message, err error) {
 	switch b[0] {
-	case openflow13.VERSION:
-		message, err = openflow13.Parse(b)
+	case openflow15.VERSION:
+		message, err = openflow15.Parse(b)
 	default:
 		log.Errorf("Received unsupported OpenFlow version: %d", b[0])
 	}

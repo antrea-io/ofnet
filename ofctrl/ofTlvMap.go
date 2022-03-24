@@ -3,16 +3,16 @@ package ofctrl
 import (
 	"fmt"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 )
 
-type TLVTableStatus openflow13.TLVTableReply
+type TLVTableStatus openflow15.TLVTableReply
 
 type TLVStatusManager interface {
 	TLVMapReplyRcvd(ofSwitch *OFSwitch, status *TLVTableStatus)
 }
 
-func (t *TLVTableStatus) GetTLVMap(index uint16) *openflow13.TLVTableMap {
+func (t *TLVTableStatus) GetTLVMap(index uint16) *openflow15.TLVTableMap {
 	for _, m := range t.TlvMaps {
 		if m.Index == index {
 			return m
@@ -45,11 +45,11 @@ func (t *TLVTableStatus) String() string {
 	return value
 }
 
-func (t *TLVTableStatus) GetTLVMapString(m *openflow13.TLVTableMap) string {
+func (t *TLVTableStatus) GetTLVMapString(m *openflow15.TLVTableMap) string {
 	return fmt.Sprintf("TLVMap: class=0x%x,type=0x%x,length=0x%x,match_field=%d", m.OptClass, m.OptType, m.OptLength, m.Index)
 }
 
-func (t *TLVTableStatus) AddTLVMap(m *openflow13.TLVTableMap) {
+func (t *TLVTableStatus) AddTLVMap(m *openflow15.TLVTableMap) {
 	t.TlvMaps = append(t.TlvMaps, m)
 }
 
@@ -67,13 +67,13 @@ func (s *OFSwitch) AddTunnelTLVMap(optClass uint16, optType uint8, optLength uin
 		}
 		return nil
 	}
-	tlvMap = &openflow13.TLVTableMap{
+	tlvMap = &openflow15.TLVTableMap{
 		OptClass:  optClass,
 		OptType:   optType,
 		OptLength: optLength,
 		Index:     tunMetadataIndex,
 	}
-	tlvMaps := []*openflow13.TLVTableMap{
+	tlvMaps := []*openflow15.TLVTableMap{
 		{
 			OptClass:  optClass,
 			OptType:   optType,
@@ -81,8 +81,8 @@ func (s *OFSwitch) AddTunnelTLVMap(optClass uint16, optType uint8, optLength uin
 			Index:     tunMetadataIndex,
 		},
 	}
-	tlvMapMod := openflow13.NewTLVTableMod(openflow13.NXTTMC_ADD, tlvMaps)
-	msg := openflow13.NewTLVTableModMessage(tlvMapMod)
+	tlvMapMod := openflow15.NewTLVTableMod(openflow15.NXTTMC_ADD, tlvMaps)
+	msg := openflow15.NewTLVTableModMessage(tlvMapMod)
 	if err := s.Send(msg); err != nil {
 		return err
 	}
@@ -90,29 +90,29 @@ func (s *OFSwitch) AddTunnelTLVMap(optClass uint16, optType uint8, optLength uin
 	return nil
 }
 
-func (s *OFSwitch) DeleteTunnelTLVMap(tlvMaps []*openflow13.TLVTableMap) error {
-	tlvMapMod := openflow13.NewTLVTableMod(openflow13.NXTTMC_DELETE, tlvMaps)
-	msg := openflow13.NewTLVTableModMessage(tlvMapMod)
+func (s *OFSwitch) DeleteTunnelTLVMap(tlvMaps []*openflow15.TLVTableMap) error {
+	tlvMapMod := openflow15.NewTLVTableMod(openflow15.NXTTMC_DELETE, tlvMaps)
+	msg := openflow15.NewTLVTableModMessage(tlvMapMod)
 	return s.Send(msg)
 }
 
-func (s *OFSwitch) ClearTunnelTLVMap(tlvMaps []*openflow13.TLVTableMap) error {
-	tlvMapMod := openflow13.NewTLVTableMod(openflow13.NXTTMC_CLEAR, tlvMaps)
-	msg := openflow13.NewTLVTableModMessage(tlvMapMod)
+func (s *OFSwitch) ClearTunnelTLVMap(tlvMaps []*openflow15.TLVTableMap) error {
+	tlvMapMod := openflow15.NewTLVTableMod(openflow15.NXTTMC_CLEAR, tlvMaps)
+	msg := openflow15.NewTLVTableModMessage(tlvMapMod)
 	return s.Send(msg)
 }
 
-func ResetFieldLength(field *openflow13.MatchField, tlvMapStatus *TLVTableStatus) *openflow13.MatchField {
+func ResetFieldLength(field *openflow15.MatchField, tlvMapStatus *TLVTableStatus) *openflow15.MatchField {
 	if tlvMapStatus == nil {
 		return field
 	}
-	if field.Class != openflow13.OXM_CLASS_NXM_1 {
+	if field.Class != openflow15.OXM_CLASS_NXM_1 {
 		return field
 	}
-	if field.Field < openflow13.NXM_NX_TUN_METADATA0 || field.Field > openflow13.NXM_NX_TUN_METADATA7 {
+	if field.Field < openflow15.NXM_NX_TUN_METADATA0 || field.Field > openflow15.NXM_NX_TUN_METADATA7 {
 		return field
 	}
-	index := field.Field - openflow13.NXM_NX_TUN_METADATA0
+	index := field.Field - openflow15.NXM_NX_TUN_METADATA0
 	m := tlvMapStatus.GetTLVMap(uint16(index))
 	if m != nil {
 		field.Length = m.OptLength
@@ -141,7 +141,7 @@ func (s *OFSwitch) requestTlvMap() error {
 	if s.tlvMgr == nil {
 		return nil
 	}
-	msg := openflow13.NewTLVTableRequest()
+	msg := openflow15.NewTLVTableRequest()
 	err := s.Send(msg)
 	if err != nil {
 		return err

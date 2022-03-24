@@ -17,7 +17,7 @@ package ofctrl
 // This file implements the forwarding graph API for the output element
 
 import (
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 )
 
 type Output struct {
@@ -31,23 +31,23 @@ func (self *Output) Type() string {
 }
 
 // instruction set for output element
-func (self *Output) GetFlowInstr() openflow13.Instruction {
-	outputInstr := openflow13.NewInstrApplyActions()
+func (self *Output) GetFlowInstr() openflow15.Instruction {
+	outputInstr := openflow15.NewInstrApplyActions()
 
 	switch self.outputType {
 	case "drop":
 		return nil
 	case "toController":
-		outputAct := openflow13.NewActionOutput(openflow13.P_CONTROLLER)
+		outputAct := openflow15.NewActionOutput(openflow15.P_CONTROLLER)
 		// Dont buffer the packets being sent to controller
-		outputAct.MaxLen = openflow13.OFPCML_NO_BUFFER
+		outputAct.MaxLen = openflow15.OFPCML_NO_BUFFER
 		outputInstr.AddAction(outputAct, false)
 	case "normal":
 		fallthrough
 	case "inPort":
 		fallthrough
 	case "port":
-		outputAct := openflow13.NewActionOutput(self.portNo)
+		outputAct := openflow15.NewActionOutput(self.portNo)
 		outputInstr.AddAction(outputAct, false)
 	}
 
@@ -55,14 +55,14 @@ func (self *Output) GetFlowInstr() openflow13.Instruction {
 }
 
 // Return an output action (Used by group mods)
-func (self *Output) GetActionMessage() openflow13.Action {
+func (self *Output) GetActionMessage() openflow15.Action {
 	switch self.outputType {
 	case "drop":
 		return nil
 	case "toController":
-		outputAct := openflow13.NewActionOutput(openflow13.P_CONTROLLER)
+		outputAct := openflow15.NewActionOutput(openflow15.P_CONTROLLER)
 		// Dont buffer the packets being sent to controller
-		outputAct.MaxLen = openflow13.OFPCML_NO_BUFFER
+		outputAct.MaxLen = openflow15.OFPCML_NO_BUFFER
 
 		return outputAct
 	case "normal":
@@ -70,7 +70,7 @@ func (self *Output) GetActionMessage() openflow13.Action {
 	case "inPort":
 		fallthrough
 	case "port":
-		return openflow13.NewActionOutput(self.portNo)
+		return openflow15.NewActionOutput(self.portNo)
 	}
 
 	return nil
@@ -81,11 +81,11 @@ func (self *Output) GetActionType() string {
 }
 
 func NewOutputInPort() *Output {
-	return &Output{outputType: "inPort", portNo: openflow13.P_IN_PORT}
+	return &Output{outputType: "inPort", portNo: openflow15.P_IN_PORT}
 }
 
 func NewOutputNormal() *Output {
-	return &Output{outputType: "normal", portNo: openflow13.P_NORMAL}
+	return &Output{outputType: "normal", portNo: openflow15.P_NORMAL}
 }
 
 func NewOutputPort(portNo uint32) *Output {

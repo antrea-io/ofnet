@@ -3,7 +3,7 @@ module antrea.io/ofnet
 go 1.15
 
 require (
-	antrea.io/libOpenflow v0.6.2
+	antrea.io/libOpenflow v0.8.0
 	github.com/Microsoft/go-winio v0.4.14
 	github.com/cenkalti/hub v1.0.1-0.20140529221144-7be60e186e66 // indirect
 	github.com/cenkalti/rpc2 v0.0.0-20140912135055-44d0d95e4f52 // indirect

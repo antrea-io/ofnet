@@ -24,7 +24,7 @@ import (
 	"time"
 
 	"antrea.io/libOpenflow/common"
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/util"
 
 	log "github.com/sirupsen/logrus"
@@ -56,7 +56,7 @@ type OFSwitch struct {
 	groupDb        map[uint32]*Group
 	meterDb        map[uint32]*Meter
 	connCh         chan int // Channel to notify controller connection status is changed
-	mQueue         chan *openflow13.MultipartRequest
+	mQueue         chan *openflow15.MultipartRequest
 	monitorEnabled bool
 	lastUpdate     time.Time // time at that receiving the last EchoReply
 	heartbeatCh    chan struct{}
@@ -169,9 +169,9 @@ func (self *OFSwitch) switchConnected() {
 	self.changeStatus(true)
 
 	// Send new feature request
-	self.Send(openflow13.NewFeaturesRequest())
+	self.Send(openflow15.NewFeaturesRequest())
 
-	self.Send(openflow13.NewEchoRequest())
+	self.Send(openflow15.NewEchoRequest())
 
 	self.heartbeatCh = make(chan struct{})
 	go func() {
@@ -180,7 +180,7 @@ func (self *OFSwitch) switchConnected() {
 		for {
 			select {
 			case <-timer.C:
-				self.Send(openflow13.NewEchoRequest())
+				self.Send(openflow15.NewEchoRequest())
 			case <-self.heartbeatCh:
 				break
 			}
@@ -228,7 +228,7 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 	switch t := msg.(type) {
 	case *common.Header:
 		switch t.Header().Type {
-		case openflow13.Type_Hello:
+		case openflow15.Type_Hello:
 			// Send Hello response
 			h, err := common.NewHello(4)
 			if err != nil {
@@ -236,27 +236,28 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 			}
 			self.Send(h)
 
-		case openflow13.Type_EchoRequest:
+		case openflow15.Type_EchoRequest:
 			// Send echo reply
-			res := openflow13.NewEchoReply()
+			res := openflow15.NewEchoReply()
 			self.Send(res)
 
-		case openflow13.Type_EchoReply:
+		case openflow15.Type_EchoReply:
 			self.lastUpdate = time.Now()
 
-		case openflow13.Type_FeaturesRequest:
+		case openflow15.Type_FeaturesRequest:
 
-		case openflow13.Type_GetConfigRequest:
+		case openflow15.Type_GetConfigRequest:
 
-		case openflow13.Type_BarrierRequest:
+		case openflow15.Type_BarrierRequest:
 
-		case openflow13.Type_BarrierReply:
+		case openflow15.Type_BarrierReply:
 
 		}
-	case *openflow13.ErrorMsg:
+	case *openflow15.ErrorMsg:
+		// Get the original message type from the error message data field.
 		errMsg := GetErrorMessage(t.Type, t.Code, 0)
 		msgType := GetErrorMessageType(t.Data)
-		log.Errorf("Received OpenFlow1.3 error: %s on message %s", errMsg, msgType)
+		log.Errorf("Received OpenFlow1.5 error: %s on message %s", errMsg, msgType)
 		result := MessageResult{
 			succeed: false,
 			errType: t.Type,
@@ -264,74 +265,88 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 			xID:     t.Xid,
 			msgType: UnknownMessage,
 		}
-		self.publishMessage(t.Xid, result)
-
-	case *openflow13.VendorHeader:
-		log.Debugf("Received Experimenter message, VendorType: %d, ExperimenterType: %d, VendorData: %+v", t.Vendor, t.ExperimenterType, t.VendorData)
-		switch t.ExperimenterType {
-		case openflow13.Type_TlvTableReply:
-			reply := t.VendorData.(*openflow13.TLVTableReply)
-			status := TLVTableStatus(*reply)
-			self.tlvMgr.TLVMapReplyRcvd(self, &status)
-		case openflow13.Type_BundleCtrl:
-			result := MessageResult{
-				xID:     t.Header.Xid,
-				succeed: true,
-				msgType: BundleControlMessage,
-			}
-			reply := t.VendorData.(*openflow13.BundleControl)
-			self.publishMessage(reply.BundleID, result)
+		var tid uint32
+		errData := t.Data.Buffer.Bytes()
+		switch t.Data.Bytes()[1] {
+		case openflow15.Type_BundleControl:
+			result.msgType = BundleControlMessage
+			tid = binary.BigEndian.Uint32(errData[8:12])
+		case openflow15.Type_BundleAddMessage:
+			result.msgType = BundleAddMessage
+			log.Debugf("handleMessages: Type_BundleAddMessage: Data Bytes(%d): %v", len(t.Data.Bytes()), t.Data.Bytes())
+			tid = binary.BigEndian.Uint32(errData[8:12])
+		default:
+			tid = t.Xid
 		}
 
-	case *openflow13.SwitchFeatures:
+		self.publishMessage(tid, result)
+
+	case *openflow15.VendorHeader:
+		log.Debugf("Received Experimenter message, VendorType: %d, ExperimenterType: %d, VendorData: %+v", t.Vendor, t.ExperimenterType, t.VendorData)
+		switch t.ExperimenterType {
+		case openflow15.Type_TlvTableReply:
+			reply := t.VendorData.(*openflow15.TLVTableReply)
+			status := TLVTableStatus(*reply)
+			self.tlvMgr.TLVMapReplyRcvd(self, &status)
+		}
+
+	case *openflow15.BundleCtrl:
+		result := MessageResult{
+			xID:     t.Header.Xid,
+			succeed: true,
+			msgType: BundleControlMessage,
+		}
+		self.publishMessage(t.BundleId, result)
+
+	case *openflow15.SwitchFeatures:
 		switch t.Header.Type {
-		case openflow13.Type_FeaturesReply:
+		case openflow15.Type_FeaturesReply:
 			go func() {
-				swConfig := openflow13.NewSetConfig()
+				swConfig := openflow15.NewSetConfig()
 				swConfig.MissSendLen = 128
 				self.Send(swConfig)
-				self.Send(openflow13.NewSetControllerID(self.ctrlID))
+				self.Send(openflow15.NewSetControllerID(self.ctrlID))
 			}()
 		}
 
-	case *openflow13.SwitchConfig:
+	case *openflow15.SwitchConfig:
 		switch t.Header.Type {
-		case openflow13.Type_GetConfigReply:
+		case openflow15.Type_GetConfigReply:
 
-		case openflow13.Type_SetConfig:
+		case openflow15.Type_SetConfig:
 
 		}
-	case *openflow13.PacketIn:
+	case *openflow15.PacketIn:
 		log.Debugf("Received packet(ofctrl): %+v", t)
 		// send packet rcvd callback
 		self.app.PacketRcvd(self, (*PacketIn)(t))
 
-	case *openflow13.FlowRemoved:
+	case *openflow15.FlowRemoved:
 
-	case *openflow13.PortStatus:
+	case *openflow15.PortStatus:
 		// FIXME: This needs to propagated to the app.
-	case *openflow13.PacketOut:
+	case *openflow15.PacketOut:
 
-	case *openflow13.FlowMod:
+	case *openflow15.FlowMod:
 
-	case *openflow13.PortMod:
+	case *openflow15.PortMod:
 
-	case *openflow13.MultipartRequest:
+	case *openflow15.MultipartRequest:
 
-	case *openflow13.MultipartReply:
+	case *openflow15.MultipartReply:
 		log.Debugf("Received MultipartReply")
-		rep := (*openflow13.MultipartReply)(t)
+		rep := (*openflow15.MultipartReply)(t)
 		if self.monitorEnabled {
 			key := fmt.Sprintf("%d", rep.Xid)
 			ch, found := monitoredFlows.Get(key)
 			if found {
-				replyChan := ch.(chan *openflow13.MultipartReply)
+				replyChan := ch.(chan *openflow15.MultipartReply)
 				replyChan <- rep
 			}
 		}
 		// send packet rcvd callback
 		self.app.MultipartReply(self, rep)
-	case *openflow13.VendorError:
+	case *openflow15.VendorError:
 		errData := t.ErrorMsg.Data.Bytes()
 		result := MessageResult{
 			succeed:      false,
@@ -344,14 +359,14 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 		errMsg := GetErrorMessage(t.Type, t.Code, experimenterID)
 		experimenterType := binary.BigEndian.Uint32(errData[12:16])
 		switch experimenterID {
-		case openflow13.ONF_EXPERIMENTER_ID:
+		case openflow15.ONF_EXPERIMENTER_ID:
 			switch experimenterType {
-			case openflow13.Type_BundleCtrl:
+			case openflow15.Type_BundleCtrl:
 				bundleID := binary.BigEndian.Uint32(errData[16:20])
 				result.msgType = BundleControlMessage
 				self.publishMessage(bundleID, result)
 				log.Errorf("Received Vendor error: %s on ONFT_BUNDLE_CONTROL message", errMsg)
-			case openflow13.Type_BundleAdd:
+			case openflow15.Type_BundleAdd:
 				bundleID := binary.BigEndian.Uint32(errData[16:20])
 				result.msgType = BundleAddMessage
 				self.publishMessage(bundleID, result)
@@ -363,11 +378,11 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 	}
 }
 
-func (self *OFSwitch) getMPReq() *openflow13.MultipartRequest {
-	mp := &openflow13.MultipartRequest{}
-	mp.Type = openflow13.MultipartType_Flow
-	mp.Header = openflow13.NewOfp13Header()
-	mp.Header.Type = openflow13.Type_MultiPartRequest
+func (self *OFSwitch) getMPReq() *openflow15.MultipartRequest {
+	mp := &openflow15.MultipartRequest{}
+	mp.Type = openflow15.MultipartType_FlowDesc
+	mp.Header = openflow15.NewOfp15Header()
+	mp.Header.Type = openflow15.Type_MultiPartRequest
 	return mp
 }
 
@@ -377,7 +392,7 @@ func (self *OFSwitch) EnableMonitor() {
 	}
 
 	if self.mQueue == nil {
-		self.mQueue = make(chan *openflow13.MultipartRequest)
+		self.mQueue = make(chan *openflow15.MultipartRequest)
 	}
 
 	go func() {
@@ -390,12 +405,12 @@ func (self *OFSwitch) EnableMonitor() {
 	self.monitorEnabled = true
 }
 
-func (self *OFSwitch) DumpFlowStats(cookieID uint64, cookieMask *uint64, flowMatch *FlowMatch, tableID *uint8) ([]*openflow13.FlowStats, error) {
+func (self *OFSwitch) DumpFlowStats(cookieID uint64, cookieMask *uint64, flowMatch *FlowMatch, tableID *uint8) ([]*openflow15.FlowDesc, error) {
 	mp := self.getMPReq()
-	replyChan := make(chan *openflow13.MultipartReply)
+	replyChan := make(chan *openflow15.MultipartReply)
 	go func() {
 		log.Debug("Add flow into monitor queue")
-		flowMonitorReq := openflow13.NewFlowStatsRequest()
+		flowMonitorReq := openflow15.NewFlowStatsRequest()
 		if tableID != nil {
 			flowMonitorReq.TableId = *tableID
 		} else {
@@ -418,14 +433,15 @@ func (self *OFSwitch) DumpFlowStats(cookieID uint64, cookieMask *uint64, flowMat
 
 	select {
 	case reply := <-replyChan:
-		flowStates := make([]*openflow13.FlowStats, 0)
-		if reply.Type == openflow13.MultipartType_Flow {
+		flowStates := make([]*openflow15.FlowDesc, 0)
+		if reply.Type == openflow15.MultipartType_FlowDesc {
 			flowArr := reply.Body
 			for _, entry := range flowArr {
-				flowStates = append(flowStates, entry.(*openflow13.FlowStats))
+				flowStates = append(flowStates, entry.(*openflow15.FlowDesc))
 			}
 			return flowStates, nil
 		}
+
 	case <-time.After(2 * time.Second):
 		return nil, errors.New("timeout to wait for MultipartReply message")
 	}
@@ -438,14 +454,14 @@ func (self *OFSwitch) CheckStatus(timeout time.Duration) bool {
 
 func (self *OFSwitch) EnableOFPortForwarding(port int, portMAC net.HardwareAddr) error {
 	config := 0
-	config &^= openflow13.PC_NO_FWD
-	mask := openflow13.PC_NO_FWD
+	config &^= openflow15.PC_NO_FWD
+	mask := openflow15.PC_NO_FWD
 	return self.sendModPortMessage(port, portMAC, config, mask)
 }
 
 func (self *OFSwitch) DisableOFPortForwarding(port int, portMAC net.HardwareAddr) error {
-	config := openflow13.PC_NO_FWD
-	mask := openflow13.PC_NO_FWD
+	config := openflow15.PC_NO_FWD
+	mask := openflow15.PC_NO_FWD
 	return self.sendModPortMessage(port, portMAC, config, mask)
 }
 
@@ -476,7 +492,7 @@ func (self *OFSwitch) unSubscribeMessage(xID uint32) {
 }
 
 func (self *OFSwitch) sendModPortMessage(port int, mac net.HardwareAddr, config int, mask int) error {
-	msg := openflow13.NewPortMod(port)
+	msg := openflow15.NewPortMod(port)
 	msg.Header.Version = 0x4
 	msg.HWAddr = mac
 	msg.Config = uint32(config)

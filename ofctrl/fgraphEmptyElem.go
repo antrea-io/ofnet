@@ -1,7 +1,7 @@
 package ofctrl
 
 import (
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 )
 
 // This file implements the forwarding graph API for empty element. It will return
@@ -16,8 +16,8 @@ func (self *EmptyElem) Type() string {
 }
 
 // instruction set for NXOutput element
-func (self *EmptyElem) GetFlowInstr() openflow13.Instruction {
-	instr := openflow13.NewInstrApplyActions()
+func (self *EmptyElem) GetFlowInstr() openflow15.Instruction {
+	instr := openflow15.NewInstrApplyActions()
 	return instr
 }
 

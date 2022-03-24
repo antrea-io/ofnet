@@ -10,7 +10,7 @@ import (
 	"sync/atomic"
 	"time"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/util"
 	log "github.com/sirupsen/logrus"
 )
@@ -22,22 +22,24 @@ func (t TransactionType) getValue() uint16 {
 }
 
 const (
-	Atomic  = TransactionType(openflow13.OFPBCT_ATOMIC)
-	Ordered = TransactionType(openflow13.OFPBCT_ORDERED)
+	Atomic  = TransactionType(openflow15.OFPBCT_ATOMIC)
+	Ordered = TransactionType(openflow15.OFPBCT_ORDERED)
 )
 
 var uid uint32 = 1
 
 type OpenFlowModMessage interface {
 	resetXid(xid uint32) util.Message
+	getXid() uint32
 }
 
 type Transaction struct {
-	ofSwitch       *OFSwitch
-	ID             uint32
-	flag           TransactionType
-	closed         bool
-	lock           sync.Mutex
+	ofSwitch *OFSwitch
+	ID       uint32
+	flag     TransactionType
+	closed   bool
+	lock     sync.Mutex
+	// number of successful messages added in the bundle
 	successAdd     map[uint32]bool
 	controlReplyCh chan MessageResult
 	controlIntCh   chan MessageResult
@@ -61,8 +63,8 @@ func (self *OFSwitch) NewTransaction(flag TransactionType) *Transaction {
 func (tx *Transaction) getError(reply MessageResult) error {
 	errType := reply.GetErrorType()
 	errCode := reply.GetErrorCode()
-	if errType == openflow13.ET_EXPERIMENTER && errCode >= openflow13.BEC_UNKNOWN && errCode <= openflow13.BEC_BUNDLE_IN_PROCESS {
-		return openflow13.ParseBundleError(reply.GetErrorCode())
+	if errType == openflow15.ET_EXPERIMENTER && errCode >= openflow15.BEC_UNKNOWN && errCode <= openflow15.BEC_BUNDLE_IN_PROCESS {
+		return openflow15.ParseBundleError(reply.GetErrorCode())
 	}
 	return fmt.Errorf("unsupported bundle error with type %d and code %d", errType, errCode)
 }
@@ -86,34 +88,23 @@ func (tx *Transaction) sendControlRequest(xID uint32, msg util.Message) error {
 	}
 }
 
-func (tx *Transaction) newBundleControlMessage(msgType uint16) *openflow13.VendorHeader {
-	bundleCtrl := &openflow13.BundleControl{
-		BundleID: tx.ID,
-		Type:     msgType,
-		Flags:    tx.flag.getValue(),
-	}
-	message := openflow13.NewBundleControl(bundleCtrl)
+func (tx *Transaction) newBundleControlMessage(msgType uint16) *openflow15.BundleCtrl {
+	message := openflow15.NewBundleCtrl(tx.ID, msgType, tx.flag.getValue())
+	log.Debugf("newBundleControlMessage XID: %x", message.Header.Xid)
 	return message
 }
 
-func (tx *Transaction) createBundleAddMessage(mod OpenFlowModMessage) (*openflow13.VendorHeader, error) {
-	bundleAdd := &openflow13.BundleAdd{
-		BundleID: tx.ID,
-		Flags:    tx.flag.getValue(),
-	}
-	message := openflow13.NewBundleAdd(bundleAdd)
-	bundleAdd.Message = mod.resetXid(message.Header.Xid)
+func (tx *Transaction) createBundleAddMessage(mod OpenFlowModMessage) (*openflow15.BndleAdd, error) {
+	message := openflow15.NewBndleAdd(tx.ID, tx.flag.getValue())
+	message.Message = mod.resetXid(message.Header.Xid)
+	log.Debugf("createBundleAddMessage XID: %x %x", message.Header.Xid, mod.getXid())
 	return message, nil
 }
 
-func (tx *Transaction) createBundleAddFlowMessage(flowMod *openflow13.FlowMod) (*openflow13.VendorHeader, error) {
-	bundleAdd := &openflow13.BundleAdd{
-		BundleID: tx.ID,
-		Flags:    tx.flag.getValue(),
-	}
-	message := openflow13.NewBundleAdd(bundleAdd)
+func (tx *Transaction) createBundleAddFlowMessage(flowMod *openflow15.FlowMod) (*openflow15.BndleAdd, error) {
+	message := openflow15.NewBndleAdd(tx.ID, tx.flag.getValue())
 	flowMod.Xid = message.Header.Xid
-	bundleAdd.Message = flowMod
+	message.Message = flowMod
 	return message, nil
 }
 
@@ -128,6 +119,7 @@ func (tx *Transaction) listenReply() {
 			case BundleControlMessage:
 				select {
 				case tx.controlIntCh <- reply:
+				//TODO:shift timeout case below
 				case <-time.After(messageTimeout):
 					log.Warningln("BundleControlMessage reply message accept timeout")
 				}
@@ -147,9 +139,9 @@ func (tx *Transaction) listenReply() {
 
 // Begin opens a bundle configuration.
 func (tx *Transaction) Begin() error {
-	message := tx.newBundleControlMessage(openflow13.OFPBCT_OPEN_REQUEST)
+	message := tx.newBundleControlMessage(openflow15.OFPBCT_OPEN_REQUEST)
 	tx.ofSwitch.subscribeMessage(tx.ID, tx.controlReplyCh)
-	tx.successAdd = make(map[uint32]bool)
+	tx.successAdd = make(map[uint32]bool) //TODO:we can move this to NewTransaction
 	// Start a new goroutine to listen Bundle Control reply and error messages if received from OFSwitch.
 	go tx.listenReply()
 
@@ -162,7 +154,7 @@ func (tx *Transaction) Begin() error {
 	return nil
 }
 
-func (tx *Transaction) AddFlow(flowMod *openflow13.FlowMod) error {
+func (tx *Transaction) AddFlow(flowMod *openflow15.FlowMod) error {
 	message, err := tx.createBundleAddFlowMessage(flowMod)
 	if err != nil {
 		return err
@@ -182,13 +174,14 @@ func (tx *Transaction) AddMessage(modMessage OpenFlowModMessage) error {
 	tx.lock.Lock()
 	tx.successAdd[message.Header.Xid] = true
 	tx.lock.Unlock()
+	log.Debugf("AddMessage: Xid: 0x%x", message.Header.Xid)
 	return tx.ofSwitch.Send(message)
 }
 
 // Complete closes the bundle configuration. It returns the number of successful messages added in the bundle.
 func (tx *Transaction) Complete() (int, error) {
 	if !tx.closed {
-		msg1 := tx.newBundleControlMessage(openflow13.OFPBCT_CLOSE_REQUEST)
+		msg1 := tx.newBundleControlMessage(openflow15.OFPBCT_CLOSE_REQUEST)
 		if err := tx.sendControlRequest(msg1.Header.Xid, msg1); err != nil {
 			return 0, err
 		}
@@ -208,7 +201,7 @@ func (tx *Transaction) Commit() error {
 		tx.ofSwitch.unSubscribeMessage(tx.ID)
 		close(tx.controlReplyCh)
 	}()
-	msg := tx.newBundleControlMessage(openflow13.OFPBCT_COMMIT_REQUEST)
+	msg := tx.newBundleControlMessage(openflow15.OFPBCT_COMMIT_REQUEST)
 	if err := tx.sendControlRequest(msg.Header.Xid, msg); err != nil {
 		return err
 	}
@@ -224,7 +217,7 @@ func (tx *Transaction) Abort() error {
 		tx.ofSwitch.unSubscribeMessage(tx.ID)
 		close(tx.controlReplyCh)
 	}()
-	msg := tx.newBundleControlMessage(openflow13.OFPBCT_DISCARD_REQUEST)
+	msg := tx.newBundleControlMessage(openflow15.OFPBCT_DISCARD_REQUEST)
 	if err := tx.sendControlRequest(msg.Header.Xid, msg); err != nil {
 		return err
 	}

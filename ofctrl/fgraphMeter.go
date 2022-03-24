@@ -1,7 +1,7 @@
 package ofctrl
 
 import (
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/util"
 )
 
@@ -20,12 +20,16 @@ const (
 )
 
 type MeterBundleMessage struct {
-	message *openflow13.MeterMod
+	message *openflow15.MeterMod
 }
 
 func (m *MeterBundleMessage) resetXid(xid uint32) util.Message {
 	m.message.Xid = xid
 	return m.message
+}
+
+func (m *MeterBundleMessage) getXid() uint32 {
+	return m.message.Xid
 }
 
 type Meter struct {
@@ -40,11 +44,6 @@ func (self *Meter) Type() string {
 	return "meter"
 }
 
-func (self *Meter) GetFlowInstr() openflow13.Instruction {
-	meterInstr := openflow13.NewInstrMeter(self.ID)
-	return meterInstr
-}
-
 func (self *Meter) AddMeterBand(meterBands ...*util.Message) {
 	if self.MeterBands == nil {
 		self.MeterBands = make([]*util.Message, 0)
@@ -56,9 +55,9 @@ func (self *Meter) AddMeterBand(meterBands ...*util.Message) {
 }
 
 func (self *Meter) Install() error {
-	command := openflow13.OFPMC_ADD
+	command := openflow15.MC_ADD
 	if self.isInstalled {
-		command = openflow13.OFPMC_MODIFY
+		command = openflow15.MC_MODIFY
 	}
 	meterMod := self.getMeterModMessage(command)
 
@@ -72,8 +71,8 @@ func (self *Meter) Install() error {
 	return nil
 }
 
-func (self *Meter) getMeterModMessage(command int) *openflow13.MeterMod {
-	meterMod := openflow13.NewMeterMod()
+func (self *Meter) getMeterModMessage(command int) *openflow15.MeterMod {
+	meterMod := openflow15.NewMeterMod()
 	meterMod.MeterId = self.ID
 	meterMod.Flags = uint16(self.Flags)
 
@@ -93,9 +92,9 @@ func (self *Meter) GetBundleMessage(command int) *MeterBundleMessage {
 
 func (self *Meter) Delete() error {
 	if self.isInstalled {
-		meterMod := openflow13.NewMeterMod()
+		meterMod := openflow15.NewMeterMod()
 		meterMod.MeterId = self.ID
-		meterMod.Command = openflow13.OFPMC_DELETE
+		meterMod.Command = openflow15.MC_DELETE
 		if err := self.Switch.Send(meterMod); err != nil {
 			return err
 		}

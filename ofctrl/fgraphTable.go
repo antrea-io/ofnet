@@ -20,7 +20,7 @@ import (
 	"fmt"
 	"sync"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -30,7 +30,7 @@ type Table struct {
 	Switch  *OFSwitch
 	TableId uint8
 	flowDb  map[string]*Flow // database of flow entries
-	lock    sync.Mutex       // lock flodb modification
+	lock    sync.Mutex       // lock flowdb modification
 }
 
 // Fgraph element type for table
@@ -39,8 +39,8 @@ func (self *Table) Type() string {
 }
 
 // instruction set for table element
-func (self *Table) GetFlowInstr() openflow13.Instruction {
-	return openflow13.NewInstrGotoTable(self.TableId)
+func (self *Table) GetFlowInstr() openflow15.Instruction {
+	return openflow15.NewInstrGotoTable(self.TableId)
 }
 
 // FIXME: global unique flow cookie

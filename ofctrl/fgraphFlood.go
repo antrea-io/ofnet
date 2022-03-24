@@ -19,7 +19,7 @@ package ofctrl
 import (
 	"errors"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 
 	log "github.com/sirupsen/logrus"
 )
@@ -45,14 +45,14 @@ func (self *Flood) Type() string {
 }
 
 // instruction set for output element
-func (self *Flood) GetFlowInstr() openflow13.Instruction {
+func (self *Flood) GetFlowInstr() openflow15.Instruction {
 	// If there are no ports in the flood entry, return
 	if !self.isInstalled {
 		return nil
 	}
 
-	groupInstr := openflow13.NewInstrApplyActions()
-	groupAct := openflow13.NewActionGroup(self.GroupId)
+	groupInstr := openflow15.NewInstrApplyActions()
+	groupAct := openflow15.NewActionGroup(self.GroupId)
 	groupInstr.AddAction(groupAct, false)
 
 	return groupInstr
@@ -97,34 +97,34 @@ func (self *Flood) NumOutput() int {
 
 // Install a group entry in OF switch
 func (self *Flood) install() error {
-	groupMod := openflow13.NewGroupMod()
+	groupMod := openflow15.NewGroupMod()
 	groupMod.GroupId = self.GroupId
 
 	// Change the OP to modify if it was already installed
 	if self.isInstalled {
-		groupMod.Command = openflow13.OFPGC_MODIFY
+		groupMod.Command = openflow15.OFPGC_MODIFY
 	}
 
 	// OF type for flood list
-	groupMod.Type = openflow13.OFPGT_ALL
+	groupMod.Type = openflow15.GT_ALL
 
 	// Loop thru all output ports and add it to group bucket
-	for _, output := range self.FloodList {
+	for idx, output := range self.FloodList {
 		// Get the output action from output entry
 		act := output.outPort.GetActionMessage()
 		if act != nil {
 			// Create a new bucket for each port
-			bkt := openflow13.NewBucket()
+			bkt := openflow15.NewBucket(uint32(idx))
 
 			// Set tunnel Id if required
 			if output.isTunnel {
-				tunnelField := openflow13.NewTunnelIdField(output.tunnelId)
-				setTunnel := openflow13.NewActionSetField(*tunnelField)
+				tunnelField := openflow15.NewTunnelIdField(output.tunnelId)
+				setTunnel := openflow15.NewActionSetField(*tunnelField)
 				bkt.AddAction(setTunnel)
 			}
 
 			// Always remove vlan tag
-			popVlan := openflow13.NewActionPopVlan()
+			popVlan := openflow15.NewActionPopVlan()
 			bkt.AddAction(popVlan)
 
 			// Add the output action to the bucket
@@ -152,9 +152,9 @@ func (self *Flood) install() error {
 func (self *Flood) Delete() error {
 	// Remove it from OVS if its installed
 	if self.isInstalled {
-		groupMod := openflow13.NewGroupMod()
+		groupMod := openflow15.NewGroupMod()
 		groupMod.GroupId = self.GroupId
-		groupMod.Command = openflow13.OFPGC_DELETE
+		groupMod.Command = openflow15.OFPGC_DELETE
 
 		log.Debugf("Deleting Group entry: %+v", groupMod)
 

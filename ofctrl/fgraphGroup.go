@@ -1,7 +1,7 @@
 package ofctrl
 
 import (
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/util"
 )
 
@@ -15,7 +15,7 @@ const (
 )
 
 type GroupBundleMessage struct {
-	message *openflow13.GroupMod
+	message *openflow15.GroupMod
 }
 
 func (m *GroupBundleMessage) resetXid(xid uint32) util.Message {
@@ -23,11 +23,15 @@ func (m *GroupBundleMessage) resetXid(xid uint32) util.Message {
 	return m.message
 }
 
+func (m *GroupBundleMessage) getXid() uint32 {
+	return m.message.Xid
+}
+
 type Group struct {
 	Switch      *OFSwitch
 	ID          uint32
 	GroupType   GroupType
-	Buckets     []*openflow13.Bucket
+	Buckets     []*openflow15.Bucket
 	isInstalled bool
 }
 
@@ -35,25 +39,25 @@ func (self *Group) Type() string {
 	return "group"
 }
 
-func (self *Group) GetActionMessage() openflow13.Action {
-	return openflow13.NewActionGroup(self.ID)
+func (self *Group) GetActionMessage() openflow15.Action {
+	return openflow15.NewActionGroup(self.ID)
 }
 
 func (self *Group) GetActionType() string {
 	return ActTypeGroup
 }
 
-func (self *Group) GetFlowInstr() openflow13.Instruction {
-	groupInstr := openflow13.NewInstrApplyActions()
+func (self *Group) GetFlowInstr() openflow15.Instruction {
+	groupInstr := openflow15.NewInstrApplyActions()
 	groupAct := self.GetActionMessage()
 	// Add group action to the instruction
 	groupInstr.AddAction(groupAct, false)
 	return groupInstr
 }
 
-func (self *Group) AddBuckets(buckets ...*openflow13.Bucket) {
+func (self *Group) AddBuckets(buckets ...*openflow15.Bucket) {
 	if self.Buckets == nil {
-		self.Buckets = make([]*openflow13.Bucket, 0)
+		self.Buckets = make([]*openflow15.Bucket, 0)
 	}
 	self.Buckets = append(self.Buckets, buckets...)
 	if self.isInstalled {
@@ -61,8 +65,8 @@ func (self *Group) AddBuckets(buckets ...*openflow13.Bucket) {
 	}
 }
 
-func (self *Group) ResetBuckets(buckets ...*openflow13.Bucket) {
-	self.Buckets = make([]*openflow13.Bucket, 0)
+func (self *Group) ResetBuckets(buckets ...*openflow15.Bucket) {
+	self.Buckets = make([]*openflow15.Bucket, 0)
 	self.Buckets = append(self.Buckets, buckets...)
 	if self.isInstalled {
 		self.Install()
@@ -70,9 +74,9 @@ func (self *Group) ResetBuckets(buckets ...*openflow13.Bucket) {
 }
 
 func (self *Group) Install() error {
-	command := openflow13.OFPGC_ADD
+	command := openflow15.OFPGC_ADD
 	if self.isInstalled {
-		command = openflow13.OFPGC_MODIFY
+		command = openflow15.OFPGC_MODIFY
 	}
 	groupMod := self.getGroupModMessage(command)
 
@@ -86,19 +90,19 @@ func (self *Group) Install() error {
 	return nil
 }
 
-func (self *Group) getGroupModMessage(command int) *openflow13.GroupMod {
-	groupMod := openflow13.NewGroupMod()
+func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
+	groupMod := openflow15.NewGroupMod()
 	groupMod.GroupId = self.ID
 
 	switch self.GroupType {
 	case GroupAll:
-		groupMod.Type = openflow13.OFPGT_ALL
+		groupMod.Type = openflow15.GT_ALL
 	case GroupSelect:
-		groupMod.Type = openflow13.OFPGT_SELECT
+		groupMod.Type = openflow15.GT_SELECT
 	case GroupIndirect:
-		groupMod.Type = openflow13.OFPGT_INDIRECT
+		groupMod.Type = openflow15.GT_INDIRECT
 	case GroupFF:
-		groupMod.Type = openflow13.OFPGT_FF
+		groupMod.Type = openflow15.GT_FF
 	}
 
 	for _, bkt := range self.Buckets {
@@ -116,9 +120,9 @@ func (self *Group) GetBundleMessage(command int) *GroupBundleMessage {
 
 func (self *Group) Delete() error {
 	if self.isInstalled {
-		groupMod := openflow13.NewGroupMod()
+		groupMod := openflow15.NewGroupMod()
 		groupMod.GroupId = self.ID
-		groupMod.Command = openflow13.OFPGC_DELETE
+		groupMod.Command = openflow15.OFPGC_DELETE
 		if err := self.Switch.Send(groupMod); err != nil {
 			return err
 		}

@@ -6,15 +6,15 @@ import (
 
 	"github.com/stretchr/testify/assert"
 
-	"antrea.io/libOpenflow/openflow13"
+	"antrea.io/libOpenflow/openflow15"
 )
 
 type multipartActor struct {
 	*OfActor
-	expectedTxs map[uint32]chan *openflow13.MultipartReply
+	expectedTxs map[uint32]chan *openflow15.MultipartReply
 }
 
-func (o *multipartActor) MultipartReply(sw *OFSwitch, rep *openflow13.MultipartReply) {
+func (o *multipartActor) MultipartReply(sw *OFSwitch, rep *openflow15.MultipartReply) {
 	if ch, found := o.expectedTxs[rep.Xid]; found {
 		ch <- rep
 	}
@@ -22,7 +22,7 @@ func (o *multipartActor) MultipartReply(sw *OFSwitch, rep *openflow13.MultipartR
 func TestMultipartReply(t *testing.T) {
 	app := new(multipartActor)
 	app.OfActor = new(OfActor)
-	app.expectedTxs = make(map[uint32]chan *openflow13.MultipartReply)
+	app.expectedTxs = make(map[uint32]chan *openflow15.MultipartReply)
 	ctrl := NewController(app)
 	brName := "brMultipart"
 	ovsBr := prepareControllerAndSwitch(t, app.OfActor, ctrl, brName)
@@ -36,14 +36,14 @@ func TestMultipartReply(t *testing.T) {
 func testTableFeatures(t *testing.T, app *multipartActor) {
 	app.Switch.EnableMonitor()
 	ofSwitch := app.Switch
-	mpartRequest := &openflow13.MultipartRequest{
-		Header: openflow13.NewOfp13Header(),
-		Type:   openflow13.MultipartType_TableFeatures,
+	mpartRequest := &openflow15.MultipartRequest{
+		Header: openflow15.NewOfp15Header(),
+		Type:   openflow15.MultipartType_TableFeatures,
 		Flags:  0,
 	}
-	mpartRequest.Header.Type = openflow13.Type_MultiPartRequest
+	mpartRequest.Header.Type = openflow15.Type_MultiPartRequest
 	mpartRequest.Header.Length = mpartRequest.Len()
-	ch := make(chan *openflow13.MultipartReply)
+	ch := make(chan *openflow15.MultipartReply)
 	xid := mpartRequest.Xid
 	app.expectedTxs[xid] = ch
 	ofSwitch.Send(mpartRequest)

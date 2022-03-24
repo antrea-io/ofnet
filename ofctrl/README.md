@@ -31,7 +31,7 @@ This creates a new controller and registers the app for event callbacks. The app
         Switch *ofctrl.OFSwitch
     }
 
-    func (o *OfApp) PacketRcvd(sw *ofctrl.OFSwitch, packet *openflow13.PacketIn) {
+    func (o *OfApp) PacketRcvd(sw *ofctrl.OFSwitch, packet *openflow15.PacketIn) {
         log.Printf("App: Received packet: %+v", packet)
     }
 
