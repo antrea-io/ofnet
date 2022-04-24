@@ -17,7 +17,8 @@ const (
 	ActTypeSetDstMac      = "setMacDa"
 	ActTypeSetSrcMac      = "setMacSa"
 	ActTypeSetTunnelID    = "setTunnelId"
-	ActTypeMetatdata      = "setMetadata"
+	ActTypeSetMetadata    = "setMetadata"   // use set_field
+	ActTypeWriteMetadata  = "writeMetadata" // use writeMetadata instruction
 	ActTypeSetSrcIP       = "setIPSa"
 	ActTypeSetDstIP       = "setIPDa"
 	ActTypeSetTunnelSrcIP = "setTunSa"
@@ -158,6 +159,20 @@ func (a *SetTunnelIDAction) GetActionMessage() openflow13.Action {
 
 func (a *SetTunnelIDAction) GetActionType() string {
 	return ActTypeSetTunnelID
+}
+
+type SetMetadataAction struct {
+	Metadata     uint64
+	MetadataMask *uint64
+}
+
+func (a *SetMetadataAction) GetActionMessage() openflow13.Action {
+	field := openflow13.NewMetadataField(a.Metadata, a.MetadataMask)
+	return openflow13.NewActionSetField(*field)
+}
+
+func (a *SetMetadataAction) GetActionType() string {
+	return ActTypeSetMetadata
 }
 
 type SetTunnelDstAction struct {
