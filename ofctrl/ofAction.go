@@ -57,6 +57,8 @@ const (
 	ActTypeSetField       = "setField"
 	ActTypeCopyField      = "copyField"
 	ActTypeMeter          = "meter"
+	ActTypeEncapsulate    = "encap"
+	ActTypeDecapsulate    = "decap"
 )
 
 type OFAction interface {
@@ -878,3 +880,30 @@ func NewMeterAction(meterId uint32) *MeterAction {
 		MeterId: meterId,
 	}
 }
+
+type NXEncapsulate struct {
+	HeaderSize uint16
+	HeaderType uint32
+	Property   []openflow15.PropTLV
+}
+
+func (a *NXEncapsulate) GetActionMessage() openflow15.Action {
+	return openflow15.NewNXActionEncapsulate(a.HeaderSize, a.HeaderType, a.Property)
+}
+
+func (a *NXEncapsulate) GetActionType() string {
+	return ActTypeEncapsulate
+}
+
+type NXDecapsulate struct {
+	HeaderType uint32
+}
+
+func (a *NXDecapsulate) GetActionMessage() openflow15.Action {
+	return openflow15.NewNXActionDecapsulate(a.HeaderType)
+}
+
+func (a *NXDecapsulate) GetActionType() string {
+	return ActTypeDecapsulate
+}
+
