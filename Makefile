@@ -37,7 +37,7 @@ test-integration:
 	@echo
 	@echo "==> Running integration tests <=="
 	@echo "SOME TESTS WILL FAIL IF NOT RUN AS ROOT!"
-	$(GO) test antrea.io/ofnet/ofctrl/...
+	$(GO) test antrea.io/ofnet/ofctrl/... -v -coverprofile cover.out
 
 .PHONY: docker-test-integration
 docker-test-integration:
@@ -54,7 +54,7 @@ endif
 		-w /usr/src/antrea.io/ofnet \
 		-v $(DOCKER_CACHE)/gopath:/tmp/gopath \
 		-v $(DOCKER_CACHE)/gocache:/tmp/gocache \
-		-v $(CURDIR):/usr/src/antrea.io/ofnet:ro \
+		-v $(CURDIR):/usr/src/antrea.io/ofnet \
 		-v /lib/modules:/lib/modules \
 		ofnet/test test-integration $(USERID) $(GRPID)
 
