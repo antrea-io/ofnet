@@ -197,6 +197,10 @@ func (m *FlowBundleMessage) getXid() uint32 {
 	return m.message.Xid
 }
 
+func (m *FlowBundleMessage) GetMessage() util.Message {
+	return m.message
+}
+
 // string key for the flow
 // FIXME: simple json conversion for now. This needs to be smarter
 func (self *Flow) flowKey() string {

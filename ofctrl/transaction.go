@@ -31,6 +31,7 @@ var uid uint32 = 1
 type OpenFlowModMessage interface {
 	resetXid(xid uint32) util.Message
 	getXid() uint32
+	GetMessage() util.Message
 }
 
 type Transaction struct {

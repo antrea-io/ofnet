@@ -27,6 +27,10 @@ func (m *GroupBundleMessage) getXid() uint32 {
 	return m.message.Xid
 }
 
+func (m *GroupBundleMessage) GetMessage() util.Message {
+	return m.message
+}
+
 type Group struct {
 	Switch      *OFSwitch
 	ID          uint32

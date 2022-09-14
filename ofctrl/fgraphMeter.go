@@ -32,6 +32,10 @@ func (m *MeterBundleMessage) getXid() uint32 {
 	return m.message.Xid
 }
 
+func (m *MeterBundleMessage) GetMessage() util.Message {
+	return m.message
+}
+
 type Meter struct {
 	Switch      *OFSwitch
 	ID          uint32
