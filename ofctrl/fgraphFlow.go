@@ -55,7 +55,9 @@ type FlowMatch struct {
 	CtIpDa        *net.IP              // IPv4 dest addr in ct
 	CtIpDaMask    *net.IP              // IPv4 dest mask in ct
 	CtIpv6Sa      *net.IP              // IPv6 source addr
+	CtIpv6SaMask  *net.IP              // IPv6 source mask in ct
 	CtIpv6Da      *net.IP              // IPv6 dest addr in ct
+	CtIpv6DaMask  *net.IP              // IPv6 dest mask in ct
 	IpProto       uint8                // IP protocol
 	CtIpProto     uint8                // IP protocol in ct
 	IpDscp        uint8                // DSCP/TOS field
@@ -534,12 +536,26 @@ func (self *Flow) xlateMatch() openflow15.Match {
 	if self.Match.CtIpv6Sa != nil {
 		ctIPv6SaField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_IPV6_SRC", false)
 		ctIPv6SaField.Value = &openflow15.Ipv6SrcField{Ipv6Src: *self.Match.CtIpv6Sa}
+		if self.Match.CtIpv6SaMask != nil {
+			mask := new(openflow15.Ipv6SrcField)
+			mask.Ipv6Src = *self.Match.CtIpv6SaMask
+			ctIPv6SaField.HasMask = true
+			ctIPv6SaField.Mask = mask
+			ctIPv6SaField.Length += uint8(mask.Len())
+		}
 		ofMatch.AddField(*ctIPv6SaField)
 	}
 
 	if self.Match.CtIpv6Da != nil {
 		ctIPv6DaField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_IPV6_DST", false)
 		ctIPv6DaField.Value = &openflow15.Ipv6DstField{Ipv6Dst: *self.Match.CtIpv6Da}
+		if self.Match.CtIpv6DaMask != nil {
+			mask := new(openflow15.Ipv6DstField)
+			mask.Ipv6Dst = *self.Match.CtIpv6DaMask
+			ctIPv6DaField.HasMask = true
+			ctIPv6DaField.Mask = mask
+			ctIPv6DaField.Length += uint8(mask.Len())
+		}
 		ofMatch.AddField(*ctIPv6DaField)
 	}
 
