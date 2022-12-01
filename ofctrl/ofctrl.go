@@ -131,7 +131,6 @@ type Controller struct {
 // Create a new controller
 func NewController(app AppInterface) *Controller {
 	c := new(Controller)
-	c.connectMode = ServerMode
 	c.id = uint16(rand.Uint32()) // #nosec G404: random number generator not used for security purposes
 
 	// for debug logs
@@ -146,6 +145,7 @@ func NewController(app AppInterface) *Controller {
 // Listen on a port
 func (c *Controller) Listen(port string) {
 	addr, _ := net.ResolveTCPAddr("tcp", port)
+	c.connectMode = ServerMode
 
 	var err error
 	c.listener, err = net.ListenTCP("tcp", addr)
@@ -290,11 +290,11 @@ func (c *Controller) handleConnection(conn net.Conn) {
 
 	// Send ofp 1.5 Hello by default
 	h, _ := common.NewHello(6)
-	if err := sendMessageWithTimeout(stream, h); err != nil {
+	log.Printf("Send hello with OF version: %d", h.Version)
+	if err := sendMessage(stream, h); err != nil {
 		log.Errorf("Failed to send HELLO message")
 		return
 	}
-	log.Printf("Sent hello with OF version: %d", h.Version)
 
 	for {
 		select {
@@ -308,11 +308,9 @@ func (c *Controller) handleConnection(conn net.Conn) {
 				if m.Version == openflow15.VERSION {
 					log.Infoln("Received Openflow 1.5 Hello message")
 					// Version negotiation is
-					// considered complete. Create
-					// new Switch and notify listening
-					// applications.
+					// considered complete.
 					stream.Version = m.Version
-					if err := sendMessageWithTimeout(stream, openflow15.NewFeaturesRequest()); err != nil {
+					if err := sendMessage(stream, openflow15.NewFeaturesRequest()); err != nil {
 						log.Errorf("Failed to send FeatureRequest message")
 						return
 					}
@@ -361,6 +359,9 @@ func (c *Controller) handleConnection(conn net.Conn) {
 			// and switch are no longer communicating. The TCPConn is
 			// still established though.
 			log.Warnln("Connection timed out.")
+			connFlag = ReConnection
+			stream.Shutdown <- true
+			log.Warnln("Connection timed out waiting for Switch feature response")
 			return
 		}
 	}
@@ -377,11 +378,18 @@ func (c *Controller) Parse(b []byte) (message util.Message, err error) {
 	return
 }
 
-func sendMessageWithTimeout(stream *util.MessageStream, msg util.Message) error {
+func sendMessage(stream *util.MessageStream, msg util.Message) error {
 	select {
-	case <-time.After(messageTimeout):
-		return fmt.Errorf("message send timeout")
+	// write to Outbound channel will not block indefinitely.
+	// Scenarios possible:
+	// 1. write success: first case
+	// 2. write times out on socket, ie. write blocks due to no read by OVS,
+	//    stream would now return an err on timeout to socket write.
+	// 3. write error, e.g. socket closed by other end, err returned by stream
 	case stream.Outbound <- msg:
 		return nil
+	case err := <-stream.Error:
+		log.Warnf("Received ERROR message Err: %v while sending msg.", err)
+		return err
 	}
 }
