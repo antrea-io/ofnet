@@ -1,6 +1,7 @@
 run:
   tests: true
   timeout: 5m
+  deadline: 5m
   skip-files:
     - ".*\\.pb\\.go"
   skip-dirs-use-default: true
@@ -12,13 +13,10 @@ linters-settings:
 linters:
   disable-all: true
   enable: # see https://golangci-lint.run/usage/linters/
-    - deadcode
+    - unused
     - staticcheck
     - govet
     - gofmt
     - goimports
     - gosec
     - misspell
-
-run:
-  deadline: 5m

@@ -1,4 +1,5 @@
-/***
+/*
+**
 Copyright 2014 Cisco Systems Inc. All rights reserved.
 
 Licensed under the Apache License, Version 2.0 (the "License");
@@ -18,6 +19,7 @@ package ofctrl
 
 import (
 	"errors"
+	"fmt"
 
 	"antrea.io/libOpenflow/openflow15"
 )
@@ -96,31 +98,41 @@ func (self *OFSwitch) DefaultTable() *Table {
 	return self.tableDb[0]
 }
 
-// Create a new group. return an error if it already exists
-func (self *OFSwitch) NewGroup(groupId uint32, groupType GroupType) (*Group, error) {
-	// check if the group already exists
-	if self.groupDb[groupId] != nil {
-		return nil, errors.New("group already exists")
+// NewGroup creates a new group; when using cache, returns an error if the group ID has already been cached, otherwise
+// returns the group object; when not using cache, returns the new group object.
+func (self *OFSwitch) NewGroup(groupId uint32, groupType GroupType, useCache bool) (*Group, error) {
+	// Check if the group already exists.
+	if useCache {
+		if self.groupDb[groupId] != nil {
+			return nil, errors.New("group already exists")
+		}
 	}
 
-	// Create a new group
+	// Create a new group.
 	group := newGroup(groupId, groupType, self)
-	// Save it in the DB
-	self.groupDb[groupId] = group
+	if useCache {
+		// Save it in cache.
+		self.groupDb[groupId] = group
+	}
 
 	return group, nil
 }
 
-// Delete a group.
-// Return an error if there are flows refer pointing at it
+// DeleteGroup deletes a group in cache.
 func (self *OFSwitch) DeleteGroup(groupId uint32) error {
+	if _, exists := self.groupDb[groupId]; !exists {
+		return fmt.Errorf("group %d does not exist in cache", groupId)
+	}
 	delete(self.groupDb, groupId)
 	return nil
 }
 
-// GetGroup Returns a group
-func (self *OFSwitch) GetGroup(groupId uint32) *Group {
-	return self.groupDb[groupId]
+// GetGroup returns a group if it is cached.
+func (self *OFSwitch) GetGroup(groupId uint32) (*Group, error) {
+	if _, exists := self.groupDb[groupId]; !exists {
+		return nil, fmt.Errorf("group %d does not exist in cache", groupId)
+	}
+	return self.groupDb[groupId], nil
 }
 
 // Create a new meter. return an error if it already exists

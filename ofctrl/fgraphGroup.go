@@ -109,13 +109,23 @@ func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 		groupMod.Type = openflow15.GT_FF
 	}
 
-	for _, bkt := range self.Buckets {
-		// Add the bucket to group
-		groupMod.AddBucket(*bkt)
+	// In a request of type OFPGC_REMOVE_BUCKET, bucket list should be empty.
+	if command != openflow15.OFPGC_REMOVE_BUCKET {
+		for _, bkt := range self.Buckets {
+			// Add the bucket to group
+			groupMod.AddBucket(*bkt)
+		}
 	}
-
 	if command == openflow15.OFPGC_INSERT_BUCKET {
+		// In a request of type OFPGC_INSERT_BUCKET, the command_bucket_id field is used to specify the position in the
+		// current installed bucket list to insert new buckets. Here place the buckets to the end of the current installed
+		// bucket list.
 		groupMod.CommandBucketId = openflow15.OFPG_BUCKET_LAST
+	} else if command == openflow15.OFPGC_REMOVE_BUCKET {
+		// In a request of type OFPGC_REMOVE_BUCKET, the CommandBucketId field is used to specify the identifier of the
+		// bucket to remove from current installed bucket list.
+		groupMod.CommandBucketId = self.Buckets[0].BucketId
+		groupMod.Buckets = nil
 	}
 	groupMod.Command = uint16(command)
 	return groupMod

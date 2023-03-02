@@ -479,7 +479,8 @@ func (self *OvsDriver) RemoveController(target string) error {
 
 // Check the local cache and see if the portname is taken already
 // HACK alert: This is used to pick next port number instead of managing
-//    port number space actively across agent restarts
+//
+//	port number space actively across agent restarts
 func (self *OvsDriver) IsPortNamePresent(intfName string) bool {
 	// lock the cache for read
 	self.lock.RLock()
