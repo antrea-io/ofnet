@@ -277,7 +277,8 @@ func generateTCPPacketOut(srcMAC, dstMAC net.HardwareAddr, srcIP net.IP, dstIP n
 }
 
 // keeping this in case it is useful later
-//nolint:deadcode
+//
+//nolint:unused
 func generatePacketOut(srcMAC net.HardwareAddr, dstMAC net.HardwareAddr, srcIP net.IP, dstIP net.IP, outputPort *uint32, actions []OFAction) *PacketOut {
 	var outPort uint32
 	if outputPort == nil {
