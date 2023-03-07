@@ -25,6 +25,12 @@ type PacketOut struct {
 	ICMPHeader *protocol.ICMP
 
 	ARPHeader *protocol.ARP
+
+	// EthernetPacket provides a convenient way to fill an Ethernet packet into
+	// openflow15.PacketOut. User could either directly provide an Ethernet packet
+	// using this field or filling L2/3/4 headers and fields above, then an Ethernet
+	// packet will be generated accordingly and added to openflow15.PacketOut.
+	EthernetPacket *protocol.Ethernet
 }
 
 func (p *PacketOut) GetMessage() util.Message {
@@ -44,7 +50,7 @@ func (p *PacketOut) GetMessage() util.Message {
 	for _, act := range p.Actions {
 		packetOut.AddAction(act.GetActionMessage())
 	}
-	packetOut.Data = p.getEthernetHeader()
+	packetOut.Data = p.getEthernetPacket()
 	if p.OutPort > 0 {
 		packetOut.AddAction(openflow15.NewActionOutput(p.OutPort))
 	} else {
@@ -53,7 +59,14 @@ func (p *PacketOut) GetMessage() util.Message {
 	return packetOut
 }
 
-func (p *PacketOut) getEthernetHeader() *protocol.Ethernet {
+// getEthernetPacket generates an Ethernet packet. If EthernetPacket is provided,
+// return it directly. Otherwise, generate an Ethernet packet based on provided
+// L2/3/4 fields, namely SrcMAC, DstMAC, IPHeader, IPv6Header, TCPHeader,
+// UDPHeader, ICMPHeader and ARPHeader.
+func (p *PacketOut) getEthernetPacket() util.Message {
+	if p.EthernetPacket != nil {
+		return p.EthernetPacket
+	}
 	ethPkt := &protocol.Ethernet{
 		HWDst: p.DstMAC,
 		HWSrc: p.SrcMAC,
