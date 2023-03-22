@@ -18,6 +18,7 @@ package ofctrl
 
 import (
 	"errors"
+	"fmt"
 
 	"antrea.io/libOpenflow/openflow15"
 )
@@ -96,31 +97,37 @@ func (self *OFSwitch) DefaultTable() *Table {
 	return self.tableDb[0]
 }
 
-// Create a new group. return an error if it already exists
-func (self *OFSwitch) NewGroup(groupId uint32, groupType GroupType) (*Group, error) {
-	// check if the group already exists
-	if self.groupDb[groupId] != nil {
-		return nil, errors.New("group already exists")
+// NewGroup creates a new group; when useCache is true, an error is returned if the group ID already exists, otherwise
+// returns the group object; when useCache is false, a new group object is returned and the caller should ensure the groupID
+// is not duplicated.
+func (self *OFSwitch) NewGroup(groupID uint32, groupType GroupType, useCache bool) (*Group, error) {
+	// Check if the group already exists.
+	if !useCache {
+		return newGroup(groupID, groupType, self), nil
 	}
 
-	// Create a new group
-	group := newGroup(groupId, groupType, self)
-	// Save it in the DB
-	self.groupDb[groupId] = group
+	if self.groupDb[groupID] != nil {
+		return nil, errors.New("group already exists")
+	}
+	// Create a new group and save it in cache.
+	group := newGroup(groupID, groupType, self)
+	self.groupDb[groupID] = group
 
 	return group, nil
 }
 
-// Delete a group.
-// Return an error if there are flows refer pointing at it
+// DeleteGroup deletes a group in cache.
 func (self *OFSwitch) DeleteGroup(groupId uint32) error {
 	delete(self.groupDb, groupId)
 	return nil
 }
 
-// GetGroup Returns a group
-func (self *OFSwitch) GetGroup(groupId uint32) *Group {
-	return self.groupDb[groupId]
+// GetGroup returns a group, and this can be only if the group is created and cached.
+func (self *OFSwitch) GetGroup(groupId uint32) (*Group, error) {
+	if _, exists := self.groupDb[groupId]; !exists {
+		return nil, fmt.Errorf("group %d does not exist in cache", groupId)
+	}
+	return self.groupDb[groupId], nil
 }
 
 // Create a new meter. return an error if it already exists
