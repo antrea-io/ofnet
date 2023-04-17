@@ -1,7 +1,7 @@
 # Ofnet
 
 Ofnet is a Golang networking library to help write Openflow controllers to
-manage Openflow switches.
+manage Openflow switchess.
 
 This repository started as a fork of
 [contiv/ofnet](https://github.com/contiv/ofnet), as the Contiv project is no
