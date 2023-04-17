@@ -46,15 +46,18 @@ type OFSwitch struct {
 	app    AppInterface
 	// Following are fgraph state for the switch
 	tableDb        map[uint8]*Table
+	tableDbMux     sync.Mutex
 	dropAction     *Output
 	sendToCtrler   *Output
 	normalLookup   *Output
 	ready          bool
-	portMux        sync.Mutex
 	statusMux      sync.Mutex
 	outputPorts    map[uint32]*Output
+	portMux        sync.Mutex
 	groupDb        map[uint32]*Group
+	groupDbMux     sync.Mutex
 	meterDb        map[uint32]*Meter
+	meterDbMux     sync.Mutex
 	connCh         chan int // Channel to notify controller connection status is changed
 	mQueue         chan *openflow15.MultipartRequest
 	monitorEnabled bool
