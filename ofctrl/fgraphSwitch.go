@@ -58,6 +58,8 @@ func (self *OFSwitch) initFgraph() {
 
 // Create a new table. return an error if it already exists
 func (self *OFSwitch) NewTable(tableId uint8) (*Table, error) {
+	self.tableDbMux.Lock()
+	defer self.tableDbMux.Unlock()
 	// Check the parameters
 	if tableId == 0 {
 		return nil, errors.New("Table 0 already exists")
@@ -88,16 +90,22 @@ func (self *OFSwitch) DeleteTable(tableId uint8) error {
 
 // GetTable Returns a table
 func (self *OFSwitch) GetTable(tableId uint8) *Table {
+	self.tableDbMux.Lock()
+	defer self.tableDbMux.Unlock()
 	return self.tableDb[tableId]
 }
 
 // Return table 0 which is the starting table for all packets
 func (self *OFSwitch) DefaultTable() *Table {
+	self.tableDbMux.Lock()
+	defer self.tableDbMux.Unlock()
 	return self.tableDb[0]
 }
 
 // Create a new group. return an error if it already exists
 func (self *OFSwitch) NewGroup(groupId uint32, groupType GroupType) (*Group, error) {
+	self.groupDbMux.Lock()
+	defer self.groupDbMux.Unlock()
 	// check if the group already exists
 	if self.groupDb[groupId] != nil {
 		return nil, errors.New("group already exists")
@@ -114,17 +122,23 @@ func (self *OFSwitch) NewGroup(groupId uint32, groupType GroupType) (*Group, err
 // Delete a group.
 // Return an error if there are flows refer pointing at it
 func (self *OFSwitch) DeleteGroup(groupId uint32) error {
+	self.groupDbMux.Lock()
+	defer self.groupDbMux.Unlock()
 	delete(self.groupDb, groupId)
 	return nil
 }
 
 // GetGroup Returns a group
 func (self *OFSwitch) GetGroup(groupId uint32) *Group {
+	self.groupDbMux.Lock()
+	defer self.groupDbMux.Unlock()
 	return self.groupDb[groupId]
 }
 
 // Create a new meter. return an error if it already exists
 func (self *OFSwitch) NewMeter(meterId uint32, flags MeterFlag) (*Meter, error) {
+	self.meterDbMux.Lock()
+	defer self.meterDbMux.Unlock()
 	// check if the meter already exists
 	if _, ok := self.meterDb[meterId]; ok {
 		return nil, errors.New("meter already exists")
@@ -141,12 +155,16 @@ func (self *OFSwitch) NewMeter(meterId uint32, flags MeterFlag) (*Meter, error) 
 // Delete a meter.
 // Return an error if there are flows refer pointing at it
 func (self *OFSwitch) DeleteMeter(meterId uint32) error {
+	self.meterDbMux.Lock()
+	defer self.meterDbMux.Unlock()
 	delete(self.meterDb, meterId)
 	return nil
 }
 
 // GetGroup Returns a meter
 func (self *OFSwitch) GetMeter(meterId uint32) *Meter {
+	self.meterDbMux.Lock()
+	defer self.meterDbMux.Unlock()
 	return self.meterDb[meterId]
 }
 
