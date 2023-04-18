@@ -167,12 +167,11 @@ func (self *OvsDriver) CreateBridge(bridgeName string) error {
 	}
 
 	// simple insert/delete operation
-	brOp := libovsdb.Operation{}
 	bridge := make(map[string]interface{})
 	bridge["name"] = bridgeName
 	bridge["protocols"], _ = libovsdb.NewOvsSet(protocols)
 	bridge["fail_mode"] = "secure"
-	brOp = libovsdb.Operation{
+	brOp := libovsdb.Operation{
 		Op:       "insert",
 		Table:    "Bridge",
 		Row:      bridge,
@@ -211,9 +210,8 @@ func (self *OvsDriver) DeleteBridge(bridgeName string) error {
 	brUuid := []libovsdb.UUID{{GoUuid: namedUuidStr}}
 
 	// simple insert/delete operation
-	brOp := libovsdb.Operation{}
 	condition := libovsdb.NewCondition("name", "==", bridgeName)
-	brOp = libovsdb.Operation{
+	brOp := libovsdb.Operation{
 		Op:    "delete",
 		Table: "Bridge",
 		Where: []interface{}{condition},

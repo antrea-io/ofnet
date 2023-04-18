@@ -20,7 +20,7 @@ test: docker-test-integration
 # code linting
 .golangci-bin:
 	@echo "===> Installing Golangci-lint <==="
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $@ v1.50.1
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $@ v1.52.2
 
 .PHONY: golangci
 golangci: .golangci-bin
