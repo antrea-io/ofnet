@@ -6,6 +6,10 @@ DOCKER_CACHE       := $(CURDIR)/.cache
 OVS_VERSION        := $(shell head -n 1 build/images/deps/ovs-version)
 GO_VERSION         := $(shell head -n 1 build/images/deps/go-version)
 
+GOLANGCI_LINT_VERSION := v1.52.2
+GOLANGCI_LINT_BINDIR  := .golangci-bin
+GOLANGCI_LINT_BIN     := $(GOLANGCI_LINT_BINDIR)/$(GOLANGCI_LINT_VERSION)/golangci-lint
+
 USERID  := $(shell id -u)
 GRPID   := $(shell id -g)
 
@@ -18,19 +22,20 @@ all: test
 test: docker-test-integration
 
 # code linting
-.golangci-bin:
+$(GOLANGCI_LINT_BIN):
 	@echo "===> Installing Golangci-lint <==="
-	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $@ v1.52.2
+	@rm -rf $(GOLANGCI_LINT_BINDIR)/* # delete old versions
+	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(GOLANGCI_LINT_BINDIR)/$(GOLANGCI_LINT_VERSION) $(GOLANGCI_LINT_VERSION)
 
 .PHONY: golangci
-golangci: .golangci-bin
+golangci: $(GOLANGCI_LINT_BIN)
 	@echo "===> Running golangci <==="
-	@GOOS=linux .golangci-bin/golangci-lint run -c .golangci.yml
+	@GOOS=linux $(GOLANGCI_LINT_BIN) run -c .golangci.yml
 
 .PHONY: golangci-fix
-golangci-fix: .golangci-bin
+golangci-fix: $(GOLANGCI_LINT_BIN)
 	@echo "===> Running golangci-fix <==="
-	@GOOS=linux .golangci-bin/golangci-lint run -c .golangci.yml --fix
+	@GOOS=linux $(GOLANGCI_LINT_BIN) run -c .golangci.yml --fix
 
 .PHONY: test-integration
 test-integration:
@@ -58,3 +63,6 @@ endif
 		-v /lib/modules:/lib/modules \
 		ofnet/test test-integration $(USERID) $(GRPID)
 
+.PHONY: clean
+clean:
+	rm -rf $(GOLANGCI_LINT_BINDIR)

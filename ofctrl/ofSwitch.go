@@ -27,8 +27,8 @@ import (
 	"antrea.io/libOpenflow/openflow15"
 	"antrea.io/libOpenflow/protocol"
 	"antrea.io/libOpenflow/util"
+	cmap "github.com/orcaman/concurrent-map/v2"
 	log "github.com/sirupsen/logrus"
-	cmap "github.com/streamrail/concurrent-map"
 )
 
 const (
@@ -72,13 +72,10 @@ type OFSwitch struct {
 	tlvMgr *tlvMapMgr
 }
 
-var switchDb cmap.ConcurrentMap
-var monitoredFlows cmap.ConcurrentMap
-
-func init() {
-	switchDb = cmap.New()
-	monitoredFlows = cmap.New()
-}
+var (
+	switchDb       = cmap.New[*OFSwitch]()
+	monitoredFlows = cmap.New[chan *openflow15.MultipartReply]()
+)
 
 // Builds and populates a Switch struct then starts listening
 // for OpenFlow messages on conn.
@@ -118,11 +115,11 @@ func NewSwitch(stream *util.MessageStream, dpid net.HardwareAddr, app AppInterfa
 
 // Returns a pointer to the Switch mapped to dpid.
 func getSwitch(dpid net.HardwareAddr) *OFSwitch {
-	sw, _ := switchDb.Get(dpid.String())
-	if sw == nil {
+	sw, ok := switchDb.Get(dpid.String())
+	if !ok {
 		return nil
 	}
-	return sw.(*OFSwitch)
+	return sw
 }
 
 // Returns the dpid of Switch s.
@@ -345,9 +342,8 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 		rep := (*openflow15.MultipartReply)(t)
 		if self.monitorEnabled {
 			key := fmt.Sprintf("%d", rep.Xid)
-			ch, found := monitoredFlows.Get(key)
+			replyChan, found := monitoredFlows.Get(key)
 			if found {
-				replyChan := ch.(chan *openflow15.MultipartReply)
 				replyChan <- rep
 			}
 		}
