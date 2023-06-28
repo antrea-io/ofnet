@@ -950,11 +950,80 @@ func TestBundle2(t *testing.T) {
 	assert.False(t, found)
 
 	time.Sleep(2 * time.Second)
-	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", true)
+	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", "", true)
 	matchStr := "priority=100,ip,in_port=11"
 	actionStr := "group:2"
 	assert.Truef(t, ofctlDumpFlowMatch(brName, int(ofActor.inputTable.TableId), matchStr, actionStr),
 		"br: %s, target flow not found on OVS, match: %s, actions: %s", brName, matchStr, actionStr)
+}
+
+func TestGroupWithSelectionMethod(t *testing.T) {
+	brName := ovsDriver.OvsBridgeName
+	tcpSrcPortFieldWithValue := openflow15.NewTcpSrcField(0x3f)
+	tcpSrcPortFieldWithoutValue := openflow15.NewTcpSrcField(0xffff)
+	nwProtoFieldWithoutValue := openflow15.NewIpProtoField(0xff)
+	for _, tc := range []struct {
+		name           string
+		groupId        uint32
+		mt             openflow15.NTRSelectionMethodType
+		param          uint64
+		fields         []openflow15.MatchField
+		propertyString string
+	}{
+		{
+			name:           "dp_hash",
+			groupId:        30,
+			mt:             openflow15.NTR_DP_HASH,
+			param:          0x1ffffffff,
+			propertyString: "selection_method=dp_hash,selection_method_param=8589934591",
+		},
+		{
+			name:           "hash without fields",
+			groupId:        31,
+			mt:             openflow15.NTR_HASH,
+			param:          0x1ffffffff,
+			propertyString: "selection_method=hash,selection_method_param=8589934591",
+		},
+		{
+			name:           "hash with fields",
+			groupId:        32,
+			mt:             openflow15.NTR_HASH,
+			fields:         []openflow15.MatchField{*tcpSrcPortFieldWithValue},
+			propertyString: "selection_method=hash,fields=tcp_src=63",
+		},
+		{
+			name:           "hash with fields no value",
+			groupId:        32,
+			mt:             openflow15.NTR_HASH,
+			fields:         []openflow15.MatchField{*tcpSrcPortFieldWithoutValue},
+			propertyString: "selection_method=hash,fields=tcp_src",
+		},
+		{
+			name:           "hash with multiple fields no value",
+			groupId:        32,
+			mt:             openflow15.NTR_HASH,
+			fields:         []openflow15.MatchField{*nwProtoFieldWithoutValue, *tcpSrcPortFieldWithValue},
+			propertyString: "selection_method=hash,fields(nw_proto,tcp_src=63)",
+		}} {
+		t.Run(tc.name, func(t *testing.T) {
+			group1 := NewGroup(tc.groupId, GroupSelect, ofActor.Switch)
+			outputAction := openflow15.NewActionOutput(10)
+			bkt := openflow15.NewBucket(0)
+			bkt.AddAction(outputAction)
+			group1.AddBuckets(bkt)
+			property := openflow15.NewNTRSelectionMethod(tc.mt, tc.param, tc.fields...)
+			group1.AddProperty(property)
+
+			err := group1.Install()
+			assert.NoError(t, err, "Failed to install group entry")
+			verifyGroup(t, brName, group1, "select", "bucket=bucket_id:0,actions=output:10", tc.propertyString, true)
+			group1.Buckets = nil
+			groupMod := group1.getGroupModMessage(openflow15.OFPGC_DELETE)
+			err = group1.Switch.Send(groupMod)
+			require.NoError(t, err, "Failed to delete group")
+			verifyGroup(t, brName, group1, "select", "bucket=bucket_id:0,actions=output:10", tc.propertyString, false)
+		})
+	}
 }
 
 func createFlow(t *testing.T, mac, ip string) *Flow {
@@ -1341,7 +1410,7 @@ func testNewFlowActionAPIsTest12(t *testing.T) {
 	err := group1.Install()
 	assert.NoError(t, err, "Failed to install group entry")
 
-	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", true)
+	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", "", true)
 
 	// Install flow and refer to group
 	inPort8 := uint32(110)
@@ -1358,7 +1427,7 @@ func testNewFlowActionAPIsTest12(t *testing.T) {
 		"priority=100,ip,in_port=110",
 		"group:1")
 	group1.Delete()
-	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", false)
+	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", "", false)
 }
 
 func TestNewFlowActionAPIs(t *testing.T) {
@@ -2090,7 +2159,7 @@ func testNXExtensionsTest13(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 	group1.AddBuckets(bkt)
 	err := group1.Install()
 	assert.NoError(t, err, "Failed to install group entry")
-	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", true)
+	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", "", true)
 
 	// Install flow and refer to group
 	inPort8 := uint32(10)
@@ -2104,7 +2173,7 @@ func testNXExtensionsTest13(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"priority=100,ip,in_port=10",
 		"group:1")
 	group1.Delete()
-	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", false)
+	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", "", false)
 }
 
 func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
@@ -2173,11 +2242,15 @@ func verifyFlowInstallAndDelete(t *testing.T, flow *Flow, nextElem FgraphElem, b
 	assert.Falsef(t, ofctlDumpFlowMatch(br, int(tableID), matchStr, actionStr), "br: %s, target flow still found on OVS after deleting it: match: %s, actions: %s", br, matchStr, actionStr)
 }
 
-func verifyGroup(t *testing.T, br string, group *Group, groupType string, buckets string, expectExists bool) {
+func verifyGroup(t *testing.T, br string, group *Group, groupType string, buckets string, properties string, expectExists bool) {
 	// dump groups
 	groupList, err := ofctlGroupDump(br)
 	assert.NoError(t, err, "Error dumping flows")
-	groupStr := fmt.Sprintf("group_id=%d,type=%s,%s", group.ID, groupType, buckets)
+	groupStr := fmt.Sprintf("group_id=%d,type=%s", group.ID, groupType)
+	if len(properties) > 0 {
+		groupStr = fmt.Sprintf("%s,%s", groupStr, properties)
+	}
+	groupStr = fmt.Sprintf("%s,%s", groupStr, buckets)
 	found := false
 	for _, groupEntry := range groupList {
 		log.Debugf("Looking for %s in %s", groupStr, groupEntry)

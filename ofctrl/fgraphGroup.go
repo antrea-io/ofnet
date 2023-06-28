@@ -36,6 +36,7 @@ type Group struct {
 	ID          uint32
 	GroupType   GroupType
 	Buckets     []*openflow15.Bucket
+	Properties  []util.Message
 	isInstalled bool
 }
 
@@ -77,6 +78,13 @@ func (self *Group) ResetBuckets(buckets ...*openflow15.Bucket) {
 	}
 }
 
+func (self *Group) AddProperty(prop util.Message) {
+	self.Properties = append(self.Properties, prop)
+	if self.isInstalled {
+		self.Install()
+	}
+}
+
 func (self *Group) Install() error {
 	command := openflow15.OFPGC_ADD
 	if self.isInstalled {
@@ -97,6 +105,7 @@ func (self *Group) Install() error {
 func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 	groupMod := openflow15.NewGroupMod()
 	groupMod.GroupId = self.ID
+	groupMod.Command = uint16(command)
 
 	switch self.GroupType {
 	case GroupAll:
@@ -109,6 +118,16 @@ func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 		groupMod.Type = openflow15.GT_FF
 	}
 
+	if command == openflow15.OFPGC_DELETE {
+		return groupMod
+	}
+
+	if command == openflow15.OFPGC_ADD || command == openflow15.OFPGC_MODIFY {
+		for _, prop := range self.Properties {
+			groupMod.Properties = append(groupMod.Properties, prop)
+		}
+	}
+
 	for _, bkt := range self.Buckets {
 		// Add the bucket to group
 		groupMod.AddBucket(*bkt)
@@ -117,7 +136,7 @@ func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 	if command == openflow15.OFPGC_INSERT_BUCKET {
 		groupMod.CommandBucketId = openflow15.OFPG_BUCKET_LAST
 	}
-	groupMod.Command = uint16(command)
+
 	return groupMod
 }
 
