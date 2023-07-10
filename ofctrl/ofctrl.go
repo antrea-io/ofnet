@@ -243,6 +243,11 @@ func (c *Controller) Connect(sock string) error {
 	}
 }
 
+// Get the controller ID
+func (c *Controller) GetControllerID() uint16 {
+	return c.id
+}
+
 func (c *Controller) getConnection(address string, maxRetry int, retryInterval time.Duration) (net.Conn, error) {
 	var count int
 	for {
