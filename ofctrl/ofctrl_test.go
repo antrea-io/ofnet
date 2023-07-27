@@ -1520,6 +1520,31 @@ func TestGetMaskBytes(t *testing.T) {
 	assert.Equal(t, 4, len(rngBytes))
 	maskString := fmt.Sprintf("0x%x", rngBytes)
 	assert.Equal(t, "0x00ffff00", maskString)
+
+	rngBytes = getMaskBytes(8, 32)
+	assert.Equal(t, 8, len(rngBytes))
+	maskString = fmt.Sprintf("0x%x", rngBytes)
+	assert.Equal(t, "0x000000ffffffff00", maskString)
+
+	rngBytes = getMaskBytes(8, 64)
+	assert.Equal(t, 16, len(rngBytes))
+	maskString = fmt.Sprintf("0x%x", rngBytes)
+	assert.Equal(t, "0x00000000000000ffffffffffffffff00", maskString)
+
+	rngBytes = getMaskBytes(8, 120)
+	assert.Equal(t, 16, len(rngBytes))
+	maskString = fmt.Sprintf("0x%x", rngBytes)
+	assert.Equal(t, "0xffffffffffffffffffffffffffffff00", maskString)
+
+	rngBytes = getMaskBytes(0, 120)
+	assert.Equal(t, 16, len(rngBytes))
+	maskString = fmt.Sprintf("0x%x", rngBytes)
+	assert.Equal(t, "0x00ffffffffffffffffffffffffffffff", maskString)
+
+	rngBytes = getMaskBytes(96, 8)
+	assert.Equal(t, 16, len(rngBytes))
+	maskString = fmt.Sprintf("0x%x", rngBytes)
+	assert.Equal(t, "0x000000ff000000000000000000000000", maskString)
 }
 
 func TestModPort(t *testing.T) {
@@ -1732,6 +1757,27 @@ func TestIPv6Flows(t *testing.T) {
 	verifyNewFlowInstallAndDelete(t, flow5, brName, app.inputTable.TableId,
 		"priority=100,icmp6,in_port=5,icmp_type=135,icmp_code=0",
 		"set_field:2001:1:1:1443::ab:1004->nd_target,set_field:136->icmpv6_type,goto_table:1")
+
+	inport6 := uint32(6)
+	flow6 := &Flow{
+		Table: app.inputTable,
+		Match: FlowMatch{
+			Priority:  100,
+			Ethertype: 0x86dd,
+			InputPort: inport6,
+			XxRegs: []*XXRegister{
+				{
+					ID:    3,
+					Data:  net.ParseIP("0102:0304:0506:0708:090a:0b0c:0d0e:0f00"),
+					Range: openflow15.NewNXRange(8, 127),
+				},
+			},
+		},
+	}
+	flow6.Drop()
+	verifyNewFlowInstallAndDelete(t, flow6, brName, app.inputTable.TableId,
+		"priority=100,ipv6,reg12=0x1020304,reg13=0x5060708,reg14=0x90a0b0c,reg15=0xd0e0f00/0xffffff00,in_port=6",
+		"drop")
 }
 
 func testNXExtensionNote(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
@@ -2209,7 +2255,7 @@ func verifyNewFlowInstallAndDelete(t *testing.T, flow *Flow, br string, tableID 
 			return false
 		}
 		return true
-	}, time.Second*10, time.Millisecond*500, "Failed to install flow with match %s. action %s", matchStr, actionStr)
+	}, time.Second*2, time.Millisecond*500, "Failed to install flow with match %s. action %s", matchStr, actionStr)
 
 	// delete the flow
 	err = flow.Send(openflow15.FC_DELETE_STRICT)
