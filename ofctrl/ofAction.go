@@ -657,21 +657,29 @@ type NXController struct {
 	UserData     []byte
 	MeterID      uint32
 	Pause        bool
+	MaxLen       *uint16
 }
 
 func (a *NXController) GetActionMessage() openflow15.Action {
+	// By default, do not buffer, i.e., send the full packet to the controller.
+	// Note that OVS does not support buffering and always sends the full
+	// packet; it will ignore other values of max_len.
+	maxLen := uint16(openflow15.OFPCML_NO_BUFFER)
+	if a.MaxLen != nil {
+		maxLen = *a.MaxLen
+	}
 	if a.Version2 {
 		action := openflow15.NewNXActionController2()
 		action.AddControllerID(a.ControllerID)
 		action.AddReason(a.Reason)
 		action.AddUserdata(a.UserData)
-		action.AddMaxLen(128)
+		action.AddMaxLen(maxLen)
 		action.AddMeterID(a.MeterID)
 		action.AddPause(a.Pause)
 		return action
 	}
 	action := openflow15.NewNXActionController(a.ControllerID)
-	action.MaxLen = 128
+	action.MaxLen = maxLen
 	action.Reason = a.Reason
 	return action
 }

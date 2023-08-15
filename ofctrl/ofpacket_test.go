@@ -148,7 +148,7 @@ func TestNxOutputAndSendController(t *testing.T) {
 	flow1.Send(openflow15.FC_ADD)
 	verifyFlowInstallAndDelete(t, flow1, NewEmptyElem(), brName, table0.TableId,
 		"priority=100,ip,dl_src=11:22:33:44:55:66",
-		fmt.Sprintf("output:NXM_NX_REG0[],controller(max_len=128,id=%d)", app.Switch.ctrlID))
+		fmt.Sprintf("output:NXM_NX_REG0[],controller(id=%d)", app.Switch.ctrlID))
 }
 
 func testPacketInOut(t *testing.T, ofApp *packetApp, ipv6 bool, reason uint8, controllerV2 bool, dstPort uint16, userData []byte, pause bool) {
