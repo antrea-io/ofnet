@@ -165,8 +165,9 @@ type NXRegister struct {
 }
 
 type XXRegister struct {
-	ID   int    // ID of NXM_NX_XXREG, value should be from 0 to 3
-	Data []byte // Data to cache in xxreg
+	ID    int                 // ID of NXM_NX_XXREG, value should be from 0 to 3
+	Data  []byte              // Data to cache in xxreg
+	Range *openflow15.NXRange // Range of bits in register
 }
 
 type NXTunMetadata struct {
@@ -450,8 +451,17 @@ func (self *Flow) xlateMatch() openflow15.Match {
 	if self.Match.XxRegs != nil {
 		for _, reg := range self.Match.XxRegs {
 			fieldName := fmt.Sprintf("NXM_NX_XXReg%d", reg.ID)
-			field, _ := openflow15.FindFieldHeaderByName(fieldName, false)
+			var mask []byte
+			if reg.Range != nil {
+				start := int(reg.Range.GetOfs())
+				length := int(reg.Range.GetNbits())
+				mask = getMaskBytes(start, length)
+			}
+			field, _ := openflow15.FindFieldHeaderByName(fieldName, mask != nil)
 			field.Value = &openflow15.ByteArrayField{Data: reg.Data, Length: uint8(len(reg.Data))}
+			if mask != nil {
+				field.Mask = &openflow15.ByteArrayField{Data: mask, Length: uint8(len(mask))}
+			}
 			ofMatch.AddField(*field)
 		}
 	}
@@ -724,10 +734,10 @@ func getMaskBytes(start, length int) []byte {
 	bytesLength := 8 * ((end + 63) / 64)
 	data := make([]byte, bytesLength)
 	for i < bytesLength {
-		subStart := i * 64
-		subEnd := i*64 + 63
+		subStart := i * 8
+		subEnd := i*8 + 63
 		if start > subEnd {
-			binary.BigEndian.PutUint64(data[i:], uint64(0))
+			binary.BigEndian.PutUint64(data[bytesLength-i-8:bytesLength-i], uint64(0))
 			i += 8
 			continue
 		}
@@ -742,7 +752,8 @@ func getMaskBytes(start, length int) []byte {
 		} else {
 			rngLength = (end - subStart) - rngStart + 1
 		}
-		data = append(data, getMaskBytes(rngStart, rngLength)...)
+		mask := getUint64WithOfs(^uint64(0), rngStart, rngLength)
+		binary.BigEndian.PutUint64(data[bytesLength-i-8:bytesLength-i], mask)
 		i += 8
 	}
 	return data
