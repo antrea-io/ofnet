@@ -3,7 +3,7 @@ module antrea.io/ofnet
 go 1.21
 
 require (
-	antrea.io/libOpenflow v0.12.1
+	antrea.io/libOpenflow v0.13.0
 	github.com/Microsoft/go-winio v0.6.1
 	github.com/contiv/libovsdb v0.0.0-20170227191248-d0061a53e358
 	github.com/orcaman/concurrent-map/v2 v2.0.1
