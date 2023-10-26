@@ -217,12 +217,3 @@ func (self *OFSwitch) NewFlood() (*Flood, error) {
 
 	return flood, nil
 }
-
-// clearGroups clears all existing groups.
-func (self *OFSwitch) clearGroups() error {
-	groupMod := openflow15.NewGroupMod()
-	groupMod.GroupId = openflow15.OFPG_ALL
-	groupMod.Command = openflow15.OFPGC_DELETE
-	groupMod.Type = openflow15.GT_ALL
-	return self.Send(groupMod)
-}

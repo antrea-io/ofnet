@@ -158,9 +158,6 @@ func (self *OFSwitch) IsReady() bool {
 
 // Handle switch connected event
 func (self *OFSwitch) switchConnected() error {
-	if err := self.clearGroups(); err != nil {
-		return fmt.Errorf("fails to clear groups: %v", err)
-	}
 	// Main receive loop for the switch
 	go self.receive()
 	// Periodically sends echo request message on the connection.
