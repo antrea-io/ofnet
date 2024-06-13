@@ -49,6 +49,13 @@ jobs:
       - name: Run integration tests
         run: |
           make docker-test-integration
+      - name: Codecov
+        uses: codecov/codecov-action@v3
+        with:
+          token: ${{ secrets.CODECOV_TOKEN }}
+          file: cover.out
+          flags: unit-tests
+          name: codecov-unit-test
 
   tidy:
     runs-on: [ubuntu-latest]
