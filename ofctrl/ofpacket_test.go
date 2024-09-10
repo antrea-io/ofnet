@@ -43,7 +43,7 @@ func TestPacketIn_PacketOut(t *testing.T) {
 	brName := "br4pkt"
 	ovsBr := prepareControllerAndSwitch(t, app.OfActor, ctrl, brName)
 	defer func() {
-		assert.Nilf(t, ovsBr.DeleteBridge(brName), "Failed to delete br %s", brName)
+		assert.NoError(t, ovsBr.Delete())
 		ctrl.Delete()
 	}()
 	app.Switch.EnableMonitor()
@@ -125,7 +125,7 @@ func TestNxOutputAndSendController(t *testing.T) {
 	brName := "br4sendcontroller"
 	ovsBr := prepareControllerAndSwitch(t, app.OfActor, ctrl, brName)
 	defer func() {
-		assert.Nilf(t, ovsBr.DeleteBridge(brName), "Failed to delete br %s", brName)
+		assert.NoError(t, ovsBr.Delete())
 		ctrl.Delete()
 	}()
 

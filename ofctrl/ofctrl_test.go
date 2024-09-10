@@ -28,6 +28,8 @@ import (
 	log "github.com/sirupsen/logrus"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+
+	"antrea.io/ofnet/ofctrl/internal"
 )
 
 type OfActor struct {
@@ -84,7 +86,7 @@ func (o *OfActor) TLVMapEnabledOnSwitch() bool {
 // Controller/Application/ovsBr work on clientMode
 var ofActor *OfActor
 var ctrler *Controller
-var ovsDriver *OvsDriver
+var ovsDriver *internal.OvsDriver
 
 // Run an ovs-ofctl command
 func runOfctlCmd(cmd, brName string) ([]byte, error) {
@@ -162,7 +164,7 @@ func TestMain(m *testing.M) {
 	ctrler = NewController(ofActor)
 
 	// Create ovs bridge and connect clientMode Controller to it
-	ovsDriver = NewOvsDriver("ovsbr12")
+	ovsDriver = internal.NewOvsDriver("ovsbr12")
 	//wait for 2sec and see if ovs br created
 	log.Infof("wait for 2sec for ovs bridge ovsbr12 to get created..")
 	time.Sleep(2 * time.Second)
@@ -194,7 +196,7 @@ func TestMain(m *testing.M) {
 	exitCode := m.Run()
 
 	// delete the bridge
-	err = ovsDriver.DeleteBridge(ovsDriver.OvsBridgeName)
+	err = ovsDriver.Delete()
 	if err != nil {
 		log.Fatalf("Error deleting the bridge: %v", err)
 	}
@@ -236,14 +238,14 @@ func TestPushMplsFlow(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify push mpls action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,in_port=1", "push_mpls:0x8847,goto_table:1"), "in port flow not found in OVS.")
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,in_port=1", "push_mpls:0x8847,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
 	err = inPortFlow.Delete()
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,in_port=1", "push_mpls:0x8847,goto_table:1"), "in port flow still found in OVS after deleting it.")
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,in_port=1", "push_mpls:0x8847,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
 func TestPopMplsFlow(t *testing.T) {
@@ -259,14 +261,14 @@ func TestPopMplsFlow(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify pop mpls action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,mpls", "pop_mpls:0x0800,goto_table:1"), "mpls flow not found in OVS.")
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,mpls", "pop_mpls:0x0800,goto_table:1"), "mpls flow not found in OVS.")
 
 	// delete the flow
 	err = mplsFlow.Delete()
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,mpls", "pop_mpls:0x0800,goto_table:1"), "mpls flow still found in OVS after deleting it.")
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,mpls", "pop_mpls:0x0800,goto_table:1"), "mpls flow still found in OVS after deleting it.")
 }
 
 func TestCreateDeleteFlow(t *testing.T) {
@@ -327,7 +329,7 @@ func TestCreateDeleteFlow(t *testing.T) {
 	assert.Nil(t, err, "Error installing the tcp flow")
 
 	// verify it got installed
-	flowList, err := ofctlFlowDump(ovsDriver.OvsBridgeName)
+	flowList, err := ofctlFlowDump(ovsDriver.BridgeName())
 	assert.Nil(t, err, "Error getting flow entry")
 
 	// Match inport flow
@@ -363,7 +365,7 @@ func TestCreateDeleteFlow(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the tcp flow")
 
 	// Make sure they are really gone
-	flowList, err = ofctlFlowDump(ovsDriver.OvsBridgeName)
+	flowList, err = ofctlFlowDump(ovsDriver.BridgeName())
 	assert.NoError(t, err, "Error getting flow entry")
 
 	// Match inport flow and see if its still there..
@@ -402,14 +404,14 @@ func TestSetUnsetDscp(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify dscp action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,ip,in_port=1,nw_tos=184",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,ip,in_port=1,nw_tos=184",
 		"set_field:23->ip_dscp,push_vlan:0x8100,set_field:4097->vlan_vid,goto_table:1"), "in port flow not found in OVS.")
 
 	// unset dscp
 	inPortFlow.UnsetDscp()
 
 	// verify dscp action is gone
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,ip,in_port=1,nw_tos=184",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,ip,in_port=1,nw_tos=184",
 		"push_vlan:0x8100,set_field:4097->vlan_vid,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -417,7 +419,7 @@ func TestSetUnsetDscp(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,in_port=1",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,in_port=1",
 		"push_vlan:0x8100,set_field:4097->vlan_vid,goto_table:1"), "in_port flow still found in OVS after deleting it.")
 }
 
@@ -440,7 +442,7 @@ func TestMatchSetMetadata(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify metadata action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,metadata=0x1100/0x1100,in_port=1",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,metadata=0x1100/0x1100,in_port=1",
 		"write_metadata:0x8800/0x8800,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -448,7 +450,7 @@ func TestMatchSetMetadata(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,metadata=0x1100/0x1100,in_port=1",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,metadata=0x1100/0x1100,in_port=1",
 		"write_metadata:0x8800/0x8800,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
@@ -469,7 +471,7 @@ func TestMatchSetTunnelId(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify metadata action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tun_id=0xa,in_port=1",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tun_id=0xa,in_port=1",
 		"set_field:0x14->tun_id,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -477,7 +479,7 @@ func TestMatchSetTunnelId(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tun_id=0xa,in_port=1",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tun_id=0xa,in_port=1",
 		"set_field:0x14->tun_id,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
@@ -507,7 +509,7 @@ func TestMatchSetIpFields(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify metadata action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tcp,in_port=1,nw_src=10.1.1.0/24,nw_dst=10.2.1.0/24",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tcp,in_port=1,nw_src=10.1.1.0/24,nw_dst=10.2.1.0/24",
 		"set_field:20.2.1.1->ip_dst,set_field:20.1.1.1->ip_src,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -515,7 +517,7 @@ func TestMatchSetIpFields(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tcp,in_port=1,nw_src=10.1.1.0/24,nw_dst=10.2.1.0/24",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tcp,in_port=1,nw_src=10.1.1.0/24,nw_dst=10.2.1.0/24",
 		"set_field:20.2.1.1->ip_dst,set_field:20.1.1.1->ip_src,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
@@ -545,7 +547,7 @@ func TestMatchIpv6Fields(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify metadata action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tcp6,in_port=1,ipv6_src=2016:616::/100,ipv6_dst=2016:617::/100,nw_tos=92",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tcp6,in_port=1,ipv6_src=2016:616::/100,ipv6_dst=2016:617::/100,nw_tos=92",
 		"set_field:46->ip_dscp,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -553,7 +555,7 @@ func TestMatchIpv6Fields(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tcp6,in_port=1,ipv6_src=2016:616::/100,ipv6_dst=2016:617::/100,nw_tos=92",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tcp6,in_port=1,ipv6_src=2016:616::/100,ipv6_dst=2016:617::/100,nw_tos=92",
 		"set_field:46->ip_dscp,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
@@ -583,7 +585,7 @@ func TestMatchSetTcpFields(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify metadata action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tcp,in_port=1,tp_src=0x8000/0xfff8,tp_dst=9000,tcp_flags=+syn+ack",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tcp,in_port=1,tp_src=0x8000/0xfff8,tp_dst=9000,tcp_flags=+syn+ack",
 		"set_field:5000->tcp_dst,set_field:4000->tcp_src,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -591,7 +593,7 @@ func TestMatchSetTcpFields(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,tcp,in_port=1,tp_src=0x8000/0xfff8,tp_dst=9000,tcp_flags=+syn+ack",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,tcp,in_port=1,tp_src=0x8000/0xfff8,tp_dst=9000,tcp_flags=+syn+ack",
 		"set_field:5000->tcp_dst,set_field:4000->tcp_src,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
@@ -616,7 +618,7 @@ func TestMatchSetUdpFields(t *testing.T) {
 	assert.NoError(t, err, "Error installing inport flow")
 
 	// verify metadata action exists
-	assert.True(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,udp,in_port=1,tp_src=8000,tp_dst=9000",
+	assert.True(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,udp,in_port=1,tp_src=8000,tp_dst=9000",
 		"set_field:5000->udp_dst,set_field:4000->udp_src,goto_table:1"), "in port flow not found in OVS.")
 
 	// delete the flow
@@ -624,7 +626,7 @@ func TestMatchSetUdpFields(t *testing.T) {
 	assert.NoError(t, err, "Error deleting the inPort flow")
 
 	// Make sure they are really gone
-	assert.False(t, ofctlDumpFlowMatch(ovsDriver.OvsBridgeName, 0, "priority=100,udp,in_port=1,tp_src=8000,tp_dst=9000",
+	assert.False(t, ofctlDumpFlowMatch(ovsDriver.BridgeName(), 0, "priority=100,udp,in_port=1,tp_src=8000,tp_dst=9000",
 		"set_field:5000->udp_dst,set_field:4000->udp_src,goto_table:1"), "in port flow still found in OVS after deleting it.")
 }
 
@@ -683,7 +685,7 @@ func TestOFSwitch_DumpFlowStats(t *testing.T) {
 }
 
 func TestMultiRangeOneReg(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	log.Infof("Enable monitor flows on table %d in bridge %s", ofActor.inputTable.TableId, brName)
 	ofActor.Switch.EnableMonitor()
 
@@ -790,20 +792,20 @@ func TestReconnectOFSwitch(t *testing.T) {
 	defer func() {
 		// Wait for flow entries flush
 		time.Sleep(1 * time.Second)
-		err := ovsBr.DeleteBridge(brName)
+		err := ovsBr.Delete()
 		assert.NoErrorf(t, err, "Failed to delete br %s", brName)
 		ctrl.Delete()
 	}()
 	assert.Equal(t, app.connectedCount, 1)
 	go func() {
-		ovsBr.DeleteBridge(brName)
+		ovsBr.Delete()
 		select {
 		case <-time.After(10 * time.Second):
-			ovsBr = NewOvsDriver(brName)
+			ovsBr = internal.NewOvsDriver(brName)
 		}
 	}()
 
-	ovsBr.DeleteBridge(brName)
+	ovsBr.Delete()
 	select {
 	case <-time.After(15 * time.Second):
 		break
@@ -811,9 +813,9 @@ func TestReconnectOFSwitch(t *testing.T) {
 	assert.Equal(t, 2, app.connectedCount)
 }
 
-func prepareControllerAndSwitch(t *testing.T, app *OfActor, ctrl *Controller, brName string) (ovsBr *OvsDriver) {
+func prepareControllerAndSwitch(t *testing.T, app *OfActor, ctrl *Controller, brName string) (ovsBr *internal.OvsDriver) {
 	// Create ovs bridge and connect clientMode Controller to it
-	ovsBr = NewOvsDriver(brName)
+	ovsBr = internal.NewOvsDriver(brName)
 	go ctrl.Connect(fmt.Sprintf("/var/run/openvswitch/%s.mgmt", brName))
 
 	time.Sleep(2 * time.Second)
@@ -831,7 +833,7 @@ func setOfTables(t *testing.T, ofActor2 *OfActor, brName string) {
 }
 
 func TestBundles(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	// Test transaction complete workflow
 	tx := ofActor.Switch.NewTransaction(Atomic)
 	err := tx.Begin()
@@ -901,7 +903,7 @@ func TestBundles(t *testing.T) {
 }
 
 func TestBundle2(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	// Test transaction complete workflow
 	tx := ofActor.Switch.NewTransaction(Ordered)
 	err := tx.Begin()
@@ -958,7 +960,7 @@ func TestBundle2(t *testing.T) {
 }
 
 func TestGroupWithSelectionMethod(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	tcpSrcPortFieldWithValue := openflow15.NewTcpSrcField(0x3f)
 	tcpSrcPortFieldWithoutValue := openflow15.NewTcpSrcField(0xffff)
 	nwProtoFieldWithoutValue := openflow15.NewIpProtoField(0xff)
@@ -1055,7 +1057,7 @@ func TestNotes(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest1(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	srcMac1, _ := net.ParseMAC("11:11:11:11:11:11")
 	srcIP1 := net.ParseIP("192.168.2.10")
@@ -1080,7 +1082,7 @@ func testNewFlowActionAPIsTest1(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest2(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	srcMac1, _ := net.ParseMAC("22:22:22:22:22:22")
 	srcIP1 := net.ParseIP("192.168.2.10")
@@ -1106,7 +1108,7 @@ func testNewFlowActionAPIsTest2(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest3(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: output in_port
 	inPort1 := uint32(103)
@@ -1125,7 +1127,7 @@ func testNewFlowActionAPIsTest3(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest4(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	//Test action: output to register
 	inPort2 := uint32(104)
@@ -1144,7 +1146,7 @@ func testNewFlowActionAPIsTest4(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest5(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: conjunction
 	inPort3 := uint32(105)
@@ -1191,7 +1193,7 @@ func testNewFlowActionAPIsTest5(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest6(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	// Test action: set tun dst addr
 	inPort4 := uint32(106)
 	flow6 := &Flow{
@@ -1211,7 +1213,7 @@ func testNewFlowActionAPIsTest6(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest7(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: move eth_src->dst_dst, move arp_sha->arp_tha, move arp_spa->arp_tpa,
 	// set_field: arp_op=2, eth_src, arp_sha, arp_spa,
@@ -1260,7 +1262,7 @@ func testNewFlowActionAPIsTest7(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest8_1(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: ct(commit, table=1, zone=0xff01,exec(load:0xf009->NXM_NX_CT_MARK[]))
 	inPort6 := uint32(108)
@@ -1291,7 +1293,7 @@ func testNewFlowActionAPIsTest8_1(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest8_2(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: ct(table=1,zone=NXM_NX_REG1[0..15],nat)
 	inPort6 := uint32(108)
@@ -1316,7 +1318,7 @@ func testNewFlowActionAPIsTest8_2(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest9(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: dec_ttl
 	inPort7 := uint32(109)
@@ -1335,7 +1337,7 @@ func testNewFlowActionAPIsTest9(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest10(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test action: ct(commit, exec(move:NXM_OF_ETH_SRC[]->NXM_NX_CT_LABEL, load:0xf009->NXM_NX_CT_MARK[]))
 	// Test match: ct_state=+new-trk
@@ -1368,7 +1370,7 @@ func testNewFlowActionAPIsTest10(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest11(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	//Test match: reg1=0x12/0xffff
 	reg1 := &NXRegister{
@@ -1393,7 +1395,7 @@ func testNewFlowActionAPIsTest11(t *testing.T) {
 }
 
 func testNewFlowActionAPIsTest12(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 
 	// Test group
 	groupId := uint32(11)
@@ -1431,7 +1433,7 @@ func testNewFlowActionAPIsTest12(t *testing.T) {
 }
 
 func TestNewFlowActionAPIs(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	log.Infof("Enable monitor flows on table %d in bridge %s", ofActor.inputTable.TableId, brName)
 	ofActor.Switch.EnableMonitor()
 
@@ -1451,7 +1453,7 @@ func TestNewFlowActionAPIs(t *testing.T) {
 }
 
 func TestSetTunnelMetadata(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	log.Infof("Enable monitor flows on table %d in bridge %s", ofActor.inputTable.TableId, brName)
 	ofActor.Switch.EnableMonitor()
 
@@ -1528,7 +1530,7 @@ func TestModPort(t *testing.T) {
 	brName := "br4modPort"
 	ovsBr := prepareControllerAndSwitch(t, app, ctrl, brName)
 	defer func() {
-		assert.Nilf(t, ovsBr.DeleteBridge(brName), "Failed to delete br %s", brName)
+		assert.NoError(t, ovsBr.Delete())
 		ctrl.Delete()
 	}()
 
@@ -1555,7 +1557,7 @@ func TestCtMatch(t *testing.T) {
 	brName := "br4ctMatch"
 	ovsBr := prepareControllerAndSwitch(t, app, ctrl, brName)
 	defer func() {
-		assert.Nilf(t, ovsBr.DeleteBridge(brName), "Failed to delete br %s", brName)
+		assert.NoError(t, ovsBr.Delete())
 		ctrl.Delete()
 	}()
 
@@ -1628,7 +1630,7 @@ func TestIPv6Flows(t *testing.T) {
 	brName := "br4IPv6"
 	ovsBr := prepareControllerAndSwitch(t, app, ctrl, brName)
 	defer func() {
-		assert.Nilf(t, ovsBr.DeleteBridge(brName), "Failed to delete br %s", brName)
+		assert.NoError(t, ovsBr.Delete())
 		ctrl.Delete()
 	}()
 
@@ -1734,8 +1736,8 @@ func TestIPv6Flows(t *testing.T) {
 		"set_field:2001:1:1:1443::ab:1004->nd_target,set_field:136->icmpv6_type,goto_table:1")
 }
 
-func testNXExtensionNote(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
-	brName := ovsBr.OvsBridgeName
+func testNXExtensionNote(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
+	brName := ovsBr.BridgeName()
 	log.Infof("Enable monitor flows on Table %d in bridge %s", ofApp.inputTable.TableId, brName)
 	ofApp.Switch.EnableMonitor()
 	srcMac1, _ := net.ParseMAC("33:33:11:11:11:11")
@@ -1754,8 +1756,8 @@ func testNXExtensionNote(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 	require.NoError(t, err)
 }
 
-func testNXExtensionLearn(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
-	brName := ovsBr.OvsBridgeName
+func testNXExtensionLearn(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
+	brName := ovsBr.BridgeName()
 	log.Infof("Enable monitor flows on Table %d in bridge %s", ofApp.inputTable.TableId, brName)
 	ofApp.Switch.EnableMonitor()
 	srcMac1, _ := net.ParseMAC("22:22:11:11:11:11")
@@ -1811,9 +1813,9 @@ func testNXExtensionLearn(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 
 }
 
-func testNXExtensionsTest1(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest1(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: load mac to src mac
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	srcMac1, _ := net.ParseMAC("11:11:11:11:11:11")
 	srcIP1 := net.ParseIP("192.168.1.10")
 	flow1, err := ofApp.inputTable.NewFlow(FlowMatch{
@@ -1834,9 +1836,9 @@ func testNXExtensionsTest1(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"set_field:11:11:11:22:22:22->eth_src,goto_table:1")
 }
 
-func testNXExtensionsTest2_1(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest2_1(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: move src mac to dst mac
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	srcIP1 := net.ParseIP("192.168.1.10")
 	srcMac2, _ := net.ParseMAC("11:11:11:11:11:22")
 	flow2, err := ofApp.inputTable.NewFlow(FlowMatch{
@@ -1857,10 +1859,10 @@ func testNXExtensionsTest2_1(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],goto_table:1")
 }
 
-func testNXExtensionsTest2_2(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest2_2(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: move src reg to dst reg, testing NXM match field
 	//              support in CopyField action.
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	srcIP1 := net.ParseIP("192.168.1.10")
 	srcMac2, _ := net.ParseMAC("11:11:11:11:11:22")
 	flow2, err := ofApp.inputTable.NewFlow(FlowMatch{
@@ -1881,9 +1883,9 @@ func testNXExtensionsTest2_2(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"move:NXM_NX_REG5[]->NXM_NX_REG6[],goto_table:1")
 }
 
-func testNXExtensionsTest3(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest3(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: output in_port
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort1 := uint32(3)
 	flow3, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -1895,9 +1897,9 @@ func testNXExtensionsTest3(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"IN_PORT")
 }
 
-func testNXExtensionsTest4(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest4(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	//Test action: output to register
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort2 := uint32(4)
 	flow4, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -1910,9 +1912,9 @@ func testNXExtensionsTest4(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"output:NXM_NX_REG1[5..10]")
 }
 
-func testNXExtensionsTest5(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest5(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: conjunction
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort3 := uint32(5)
 	flow5, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -1953,9 +1955,9 @@ func testNXExtensionsTest5(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"br: %s, target flow still found in OVS after deleting it", brName)
 }
 
-func testNXExtensionsTest6(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest6(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: set tun dst addr
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort4 := uint32(6)
 	flow6, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -1970,11 +1972,11 @@ func testNXExtensionsTest6(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"set_field:192.168.1.100->tun_dst,goto_table:1")
 }
 
-func testNXExtensionsTest7(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest7(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: move eth_src->dst_dst, move arp_sha->arp_tha, move arp_spa->arp_tpa,
 	// set_field: arp_op=2, eth_src, arp_sha, arp_spa,
 	// output:IN_PORT
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort5 := uint32(7)
 	flow7, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -2016,9 +2018,9 @@ func testNXExtensionsTest7(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"move:NXM_OF_ETH_SRC[]->NXM_OF_ETH_DST[],move:NXM_NX_ARP_SHA[]->NXM_NX_ARP_THA[],move:NXM_OF_ARP_SPA[]->NXM_OF_ARP_TPA[],set_field:2->arp_op,set_field:11:11:11:11:11:22->eth_src,set_field:11:11:11:11:11:22->arp_sha,set_field:192.168.1.100->arp_spa,IN_PORT")
 }
 
-func testNXExtensionsTest8(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest8(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: ct(commit, table=1, zone=0xff01,exec(load:0xf009->NXM_NX_CT_MARK[]))
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort6 := uint32(8)
 	flow8, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -2052,9 +2054,9 @@ func testNXExtensionsTest8(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"ct(table=1,zone=65281,nat),goto_table:1")
 }
 
-func testNXExtensionsTest9(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest9(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: dec_ttl
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	inPort7 := uint32(9)
 	flow9, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
@@ -2069,10 +2071,10 @@ func testNXExtensionsTest9(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"dec_ttl,goto_table:1")
 }
 
-func testNXExtensionsTest10(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest10(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test action: ct(commit, exec(move:NXM_OF_ETH_SRC[]->NXM_NX_CT_LABEL, load:0xf009->NXM_NX_CT_MARK[]))
 	// Test match: ct_state=+new-trk
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	ctStates := openflow15.NewCTStates()
 	ctStates.SetNew()
 	ctStates.UnsetTrk()
@@ -2100,8 +2102,8 @@ func testNXExtensionsTest10(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"ct(commit,exec(move:NXM_OF_ETH_SRC[]->NXM_NX_CT_LABEL[0..47],set_field:0xf009/0xffff->ct_mark)),goto_table:1")
 }
 
-func testNXExtensionsTest11(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
-	brName := ovsBr.OvsBridgeName
+func testNXExtensionsTest11(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
+	brName := ovsBr.BridgeName()
 	status := ofApp.Switch.CheckStatus(1)
 	assert.True(t, status, "Failed to check Switch status.")
 	//Test match: reg1=0x12/0xffff
@@ -2124,8 +2126,8 @@ func testNXExtensionsTest11(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"ct(commit),goto_table:1")
 }
 
-func testNXExtensionsTest12(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
-	brName := ovsBr.OvsBridgeName
+func testNXExtensionsTest12(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
+	brName := ovsBr.BridgeName()
 	//Test match: ct_mark=0x20/0x20
 	var mask = uint32(0x20)
 	flow12, err := ofApp.inputTable.NewFlow(FlowMatch{
@@ -2140,9 +2142,9 @@ func testNXExtensionsTest12(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		"goto_table:1")
 }
 
-func testNXExtensionsTest13(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
+func testNXExtensionsTest13(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
 	// Test group
-	brName := ovsBr.OvsBridgeName
+	brName := ovsBr.BridgeName()
 	groupId := uint32(1)
 
 	group1 := NewGroup(groupId, GroupSelect, ofApp.Switch)
@@ -2176,8 +2178,8 @@ func testNXExtensionsTest13(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 	verifyGroup(t, brName, group1, "select", "bucket=bucket_id:50,actions=ct(commit,nat(src=10.0.0.240,random))", "", false)
 }
 
-func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
-	brName := ovsBr.OvsBridgeName
+func testNXExtensionsWithOFApplication(ofApp *OfActor, ovsBr *internal.OvsDriver, t *testing.T) {
+	brName := ovsBr.BridgeName()
 	log.Infof("Enable monitor flows on table %d in bridge %s", ofApp.inputTable.TableId, brName)
 	ofApp.Switch.EnableMonitor()
 
@@ -2281,7 +2283,7 @@ func ofctlGroupDump(brName string) ([]string, error) {
 
 // Test flows using write_actions
 func TestWriteactionsFlows(t *testing.T) {
-	brName := ovsDriver.OvsBridgeName
+	brName := ovsDriver.BridgeName()
 	log.Infof("Enable monitor flows on table %d in bridge %s", ofActor.inputTable.TableId, brName)
 	ofActor.Switch.EnableMonitor()
 

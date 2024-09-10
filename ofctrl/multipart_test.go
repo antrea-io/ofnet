@@ -27,7 +27,7 @@ func TestMultipartReply(t *testing.T) {
 	brName := "brMultipart"
 	ovsBr := prepareControllerAndSwitch(t, app.OfActor, ctrl, brName)
 	defer func() {
-		assert.Nilf(t, ovsBr.DeleteBridge(brName), "Failed to delete br %s", brName)
+		assert.NoError(t, ovsBr.Delete())
 		ctrl.Delete()
 	}()
 	testTableFeatures(t, app)
