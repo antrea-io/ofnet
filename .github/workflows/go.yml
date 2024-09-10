@@ -10,18 +10,6 @@ on:
     - release-*
 
 jobs:
-  # test:
-  #   runs-on: [ubuntu-latest]
-  #   steps:
-  #   - name: Set up Go 1.15
-  #     uses: actions/setup-go@v1
-  #     with:
-  #       go-version: 1.15
-  #   - name: Check-out code
-  #     uses: actions/checkout@v4
-  #   - name: Run unit tests
-  #     run: |
-  #       make test
   test-integration:
     name: Integration test
     runs-on: [ubuntu-latest]
@@ -32,20 +20,6 @@ jobs:
         uses: actions/setup-go@v5
         with:
           go-version-file: 'go.mod'
-      - uses: actions/cache@v4
-        with:
-          # In order:
-          # * Module download cache
-          # * Build cache (Linux)
-          # * Build cache (Mac)
-          path: |
-            ~/go/pkg/mod
-            ~/.cache/go-build
-            ~/Library/Caches/go-build
-            %LocalAppData%\go-build
-          key: ${{ runner.os }}-${{ env.go-cache-name }}-${{ hashFiles('**/go.sum') }}
-          restore-keys: |
-            ${{ runner.os }}-${{ env.go-cache-name }}-
       - name: Run integration tests
         run: |
           make docker-test-integration
