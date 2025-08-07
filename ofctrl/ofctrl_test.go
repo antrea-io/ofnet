@@ -806,17 +806,12 @@ func TestReconnectOFSwitch(t *testing.T) {
 	assert.Equal(t, app.connectedCount, 1)
 	go func() {
 		ovsBr.DeleteBridge(brName)
-		select {
-		case <-time.After(10 * time.Second):
-			ovsBr = NewOvsDriver(brName)
-		}
+		<-time.After(10 * time.Second)
+		ovsBr = NewOvsDriver(brName)
 	}()
 
 	ovsBr.DeleteBridge(brName)
-	select {
-	case <-time.After(15 * time.Second):
-		break
-	}
+	<-time.After(15 * time.Second)
 	assert.Equal(t, 2, app.connectedCount)
 }
 
@@ -901,7 +896,7 @@ func TestBundles(t *testing.T) {
 	fm4, err := flow4.GetBundleMessage(openflow15.FC_ADD)
 	require.NoError(t, err, "Failed to generate FlowMod from Flow")
 	message, _ := tx3.createBundleAddMessage(fm4)
-	message.Header.Xid = uint32(100001)
+	message.Xid = uint32(100001)
 	tx3.ofSwitch.Send(message)
 	count, err = tx3.Complete()
 	require.NoError(t, err, "Failed to find addMesssage errors transaction")
@@ -1284,7 +1279,7 @@ func testNewFlowActionAPIsTest8_1(t *testing.T) {
 	ctTable := uint8(1)
 	ctZone := uint16(0xff01)
 
-	var setFieldMask uint32 = 0xffff
+	setFieldMask := uint32(0xffff)
 	setField := openflow15.NewCTMarkMatchField(0xf009, &setFieldMask)
 	ctLoadAction := openflow15.NewActionSetField(*setField)
 	conntrack := NewNXConnTrackAction(true, false, &ctTable, &ctZone, ctLoadAction)
@@ -1365,7 +1360,7 @@ func testNewFlowActionAPIsTest10(t *testing.T) {
 	require.NoError(t, err)
 	ctMoveAction := openflow15.NewActionCopyField(48, 0, 0, *ctMoveSrc, *ctMoveDst)
 
-	var setFieldMask uint32 = 0xffff
+	setFieldMask := uint32(0xffff)
 	setField := openflow15.NewCTMarkMatchField(0xf009, &setFieldMask)
 	ctLoadAction := openflow15.NewActionSetField(*setField)
 
@@ -1385,7 +1380,7 @@ func testNewFlowActionAPIsTest11(t *testing.T) {
 		Data:  uint32(0x12),
 		Range: openflow15.NewNXRange(0, 15),
 	}
-	var regs = []*NXRegister{reg1}
+	regs := []*NXRegister{reg1}
 	flow11 := &Flow{
 		Table: ofActor.inputTable,
 		Match: FlowMatch{
@@ -2037,7 +2032,7 @@ func testNXExtensionsTest8(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 	require.Nilf(t, err, "Failed to generate flow: %+v", flow8)
 	ctTable := uint8(1)
 	ctZone := uint16(0xff01)
-	var setFieldMask uint32 = 0xffff
+	setFieldMask := uint32(0xffff)
 	setField := openflow15.NewCTMarkMatchField(0xf009, &setFieldMask)
 	ctLoadAction := openflow15.NewActionSetField(*setField)
 	err = flow8.ConnTrack(true, false, &ctTable, &ctZone, ctLoadAction)
@@ -2092,7 +2087,7 @@ func testNXExtensionsTest10(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 	})
 	require.Nilf(t, err, "Failed to generate flow: %+v", flow10)
 
-	var setFieldMask uint32 = 0xffff
+	setFieldMask := uint32(0xffff)
 	setField := openflow15.NewCTMarkMatchField(0xf009, &setFieldMask)
 	ctLoadAction := openflow15.NewActionSetField(*setField)
 
@@ -2119,7 +2114,7 @@ func testNXExtensionsTest11(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 		Data:  uint32(0x12),
 		Range: openflow15.NewNXRange(0, 15),
 	}
-	var regs = []*NXRegister{reg1}
+	regs := []*NXRegister{reg1}
 	flow11, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:  100,
 		Ethertype: 0x0800,
@@ -2136,7 +2131,7 @@ func testNXExtensionsTest11(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 func testNXExtensionsTest12(ofApp *OfActor, ovsBr *OvsDriver, t *testing.T) {
 	brName := ovsBr.OvsBridgeName
 	//Test match: ct_mark=0x20/0x20
-	var mask = uint32(0x20)
+	mask := uint32(0x20)
 	flow12, err := ofApp.inputTable.NewFlow(FlowMatch{
 		Priority:   100,
 		Ethertype:  0x0800,

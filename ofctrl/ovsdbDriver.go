@@ -252,7 +252,7 @@ func (self *OvsDriver) CreatePort(intfName, intfType string, vlanTag uint) error
 	portUuid := []libovsdb.UUID{{GoUuid: portUuidStr}}
 	intfUuid := []libovsdb.UUID{{GoUuid: intfUuidStr}}
 	opStr := "insert"
-	var err error = nil
+	var err error
 
 	// insert/delete a row in Interface table
 	intf := make(map[string]interface{})
@@ -365,7 +365,7 @@ func (self *OvsDriver) CreateVtep(intfName string, vtepRemoteIP string) error {
 	intfUuid := []libovsdb.UUID{{GoUuid: intfUuidStr}}
 	opStr := "insert"
 	intfType := "vxlan"
-	var err error = nil
+	var err error
 
 	// insert/delete a row in Interface table
 	intf := make(map[string]interface{})
@@ -434,7 +434,7 @@ func (self *OvsDriver) DeleteVtep(intfName string) error {
 func (self *OvsDriver) AddController(ipAddr string, portNo uint16) error {
 	// Format target string
 	target := fmt.Sprintf("tcp:%s:%d", ipAddr, portNo)
-	ctrlerUuidStr := fmt.Sprintf("local")
+	ctrlerUuidStr := "local"
 	ctrlerUuid := []libovsdb.UUID{{GoUuid: ctrlerUuidStr}}
 
 	// If controller already exists, nothing to do
@@ -608,7 +608,7 @@ func (self *OvsDriver) GetOfpPortNo(intfName string) (uint32, error) {
 				//retry few more time. Due to asynchronous call between
 				//port creation and populating ovsdb entry for the interface
 				//may not be populated instantly.
-				var ofpPort uint32 = uint32(reflect.ValueOf(value).Float())
+				ofpPort := uint32(reflect.ValueOf(value).Float())
 				return ofpPort, nil
 			}
 		}

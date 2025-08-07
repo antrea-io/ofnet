@@ -123,9 +123,7 @@ func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 	}
 
 	if command == openflow15.OFPGC_ADD || command == openflow15.OFPGC_MODIFY {
-		for _, prop := range self.Properties {
-			groupMod.Properties = append(groupMod.Properties, prop)
-		}
+		groupMod.Properties = append(groupMod.Properties, self.Properties...)
 	}
 
 	for _, bkt := range self.Buckets {

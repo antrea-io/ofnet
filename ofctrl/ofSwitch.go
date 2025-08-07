@@ -271,7 +271,7 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 			msgType: UnknownMessage,
 		}
 		var tid uint32
-		errData := t.Data.Buffer.Bytes()
+		errData := t.Data.Bytes()
 		switch t.Data.Bytes()[1] {
 		case openflow15.Type_BundleControl:
 			result.msgType = BundleControlMessage
@@ -301,7 +301,7 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 
 	case *openflow15.BundleCtrl:
 		result := MessageResult{
-			xID:     t.Header.Xid,
+			xID:     t.Xid,
 			succeed: true,
 			msgType: BundleControlMessage,
 		}
@@ -310,7 +310,7 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 	case *openflow15.SwitchFeatures:
 
 	case *openflow15.SwitchConfig:
-		switch t.Header.Type {
+		switch t.Type {
 		case openflow15.Type_GetConfigReply:
 
 		case openflow15.Type_SetConfig:
@@ -351,7 +351,7 @@ func (self *OFSwitch) handleMessages(dpid net.HardwareAddr, msg util.Message) {
 		// send packet rcvd callback
 		self.app.MultipartReply(self, t)
 	case *openflow15.VendorError:
-		errData := t.ErrorMsg.Data.Bytes()
+		errData := t.Data.Bytes()
 		result := MessageResult{
 			succeed:      false,
 			errType:      t.Type,
@@ -493,7 +493,7 @@ func (self *OFSwitch) unSubscribeMessage(xID uint32) {
 
 func (self *OFSwitch) sendModPortMessage(port int, mac net.HardwareAddr, config int, mask int) error {
 	msg := openflow15.NewPortMod(port)
-	msg.Header.Version = 0x6
+	msg.Version = 0x6
 	msg.HWAddr = mac
 	msg.Config = uint32(config)
 	msg.Mask = uint32(mask)

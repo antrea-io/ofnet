@@ -204,8 +204,8 @@ func (c *Controller) Connect(sock string) error {
 	var err error
 
 	// Parse retry configuration.
-	var maxRetry = maxRetryForConnection
-	var retryInterval = 1 * time.Second
+	maxRetry := maxRetryForConnection
+	retryInterval := 1 * time.Second
 	if retryController, ok := c.app.(ConnectionRetryControl); ok {
 		maxRetry = retryController.MaxRetry()
 		retryInterval = retryController.RetryInterval()
@@ -274,9 +274,10 @@ func (c *Controller) getConnection(address string, maxRetry int, retryInterval t
 
 // Cleanup the controller
 func (c *Controller) Delete() {
-	if c.connectMode == ServerMode {
+	switch c.connectMode {
+	case ServerMode:
 		c.listener.Close()
-	} else if c.connectMode == ClientMode {
+	case ClientMode:
 		// Send signal to stop connections to the switch
 		close(c.exitCh)
 	}
@@ -286,7 +287,7 @@ func (c *Controller) Delete() {
 
 // Handle TCP connection from the switch
 func (c *Controller) handleConnection(conn net.Conn) {
-	var connFlag = ReConnection
+	connFlag := ReConnection
 	defer func() {
 		c.connCh <- connFlag
 	}()
@@ -338,7 +339,7 @@ func (c *Controller) handleConnection(conn net.Conn) {
 				log.Printf("Received ofp1.5 Switch feature response: %+v", *m)
 
 				// Create a new switch and handover the stream
-				var reConnChan chan int = nil
+				var reConnChan chan int
 				if c.connectMode == ClientMode {
 					reConnChan = c.connCh
 				}

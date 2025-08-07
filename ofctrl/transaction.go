@@ -91,48 +91,42 @@ func (tx *Transaction) sendControlRequest(xID uint32, msg util.Message) error {
 
 func (tx *Transaction) newBundleControlMessage(msgType uint16) *openflow15.BundleCtrl {
 	message := openflow15.NewBundleCtrl(tx.ID, msgType, tx.flag.getValue())
-	log.Debugf("newBundleControlMessage XID: %x", message.Header.Xid)
+	log.Debugf("newBundleControlMessage XID: %x", message.Xid)
 	return message
 }
 
 func (tx *Transaction) createBundleAddMessage(mod OpenFlowModMessage) (*openflow15.BndleAdd, error) {
 	message := openflow15.NewBndleAdd(tx.ID, tx.flag.getValue())
-	message.Message = mod.resetXid(message.Header.Xid)
-	log.Debugf("createBundleAddMessage XID: %x %x", message.Header.Xid, mod.getXid())
+	message.Message = mod.resetXid(message.Xid)
+	log.Debugf("createBundleAddMessage XID: %x %x", message.Xid, mod.getXid())
 	return message, nil
 }
 
 func (tx *Transaction) createBundleAddFlowMessage(flowMod *openflow15.FlowMod) (*openflow15.BndleAdd, error) {
 	message := openflow15.NewBndleAdd(tx.ID, tx.flag.getValue())
-	flowMod.Xid = message.Header.Xid
+	flowMod.Xid = message.Xid
 	message.Message = flowMod
 	return message, nil
 }
 
 func (tx *Transaction) listenReply() {
-	for {
-		select {
-		case reply, ok := <-tx.controlReplyCh:
-			if !ok { // controlReplyCh closed.
-				return
+	for reply := range tx.controlReplyCh {
+		switch reply.msgType {
+		case BundleControlMessage:
+			select {
+			case tx.controlIntCh <- reply:
+			//TODO:shift timeout case below
+			case <-time.After(messageTimeout):
+				log.Warningln("BundleControlMessage reply message accept timeout")
 			}
-			switch reply.msgType {
-			case BundleControlMessage:
-				select {
-				case tx.controlIntCh <- reply:
-				//TODO:shift timeout case below
-				case <-time.After(messageTimeout):
-					log.Warningln("BundleControlMessage reply message accept timeout")
-				}
-			case BundleAddMessage:
-				if !reply.succeed {
-					func() {
-						tx.lock.Lock()
-						defer tx.lock.Unlock()
-						// Remove failed add message from successAdd.
-						delete(tx.successAdd, reply.xID)
-					}()
-				}
+		case BundleAddMessage:
+			if !reply.succeed {
+				func() {
+					tx.lock.Lock()
+					defer tx.lock.Unlock()
+					// Remove failed add message from successAdd.
+					delete(tx.successAdd, reply.xID)
+				}()
 			}
 		}
 	}
@@ -146,7 +140,7 @@ func (tx *Transaction) Begin() error {
 	// Start a new goroutine to listen Bundle Control reply and error messages if received from OFSwitch.
 	go tx.listenReply()
 
-	err := tx.sendControlRequest(message.Header.Xid, message)
+	err := tx.sendControlRequest(message.Xid, message)
 	if err != nil {
 		tx.ofSwitch.unSubscribeMessage(tx.ID)
 		close(tx.controlReplyCh)
@@ -161,7 +155,7 @@ func (tx *Transaction) AddFlow(flowMod *openflow15.FlowMod) error {
 		return err
 	}
 	tx.lock.Lock()
-	tx.successAdd[message.Header.Xid] = true
+	tx.successAdd[message.Xid] = true
 	tx.lock.Unlock()
 	return tx.ofSwitch.Send(message)
 }
@@ -173,9 +167,9 @@ func (tx *Transaction) AddMessage(modMessage OpenFlowModMessage) error {
 		return err
 	}
 	tx.lock.Lock()
-	tx.successAdd[message.Header.Xid] = true
+	tx.successAdd[message.Xid] = true
 	tx.lock.Unlock()
-	log.Debugf("AddMessage: Xid: 0x%x", message.Header.Xid)
+	log.Debugf("AddMessage: Xid: 0x%x", message.Xid)
 	return tx.ofSwitch.Send(message)
 }
 
@@ -183,7 +177,7 @@ func (tx *Transaction) AddMessage(modMessage OpenFlowModMessage) error {
 func (tx *Transaction) Complete() (int, error) {
 	if !tx.closed {
 		msg1 := tx.newBundleControlMessage(openflow15.OFPBCT_CLOSE_REQUEST)
-		if err := tx.sendControlRequest(msg1.Header.Xid, msg1); err != nil {
+		if err := tx.sendControlRequest(msg1.Xid, msg1); err != nil {
 			return 0, err
 		}
 		tx.closed = true
@@ -203,7 +197,7 @@ func (tx *Transaction) Commit() error {
 		close(tx.controlReplyCh)
 	}()
 	msg := tx.newBundleControlMessage(openflow15.OFPBCT_COMMIT_REQUEST)
-	if err := tx.sendControlRequest(msg.Header.Xid, msg); err != nil {
+	if err := tx.sendControlRequest(msg.Xid, msg); err != nil {
 		return err
 	}
 	return nil
@@ -219,7 +213,7 @@ func (tx *Transaction) Abort() error {
 		close(tx.controlReplyCh)
 	}()
 	msg := tx.newBundleControlMessage(openflow15.OFPBCT_DISCARD_REQUEST)
-	if err := tx.sendControlRequest(msg.Header.Xid, msg); err != nil {
+	if err := tx.sendControlRequest(msg.Xid, msg); err != nil {
 		return err
 	}
 	return nil

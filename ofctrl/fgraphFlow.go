@@ -752,7 +752,7 @@ func getMaskBytes(start, length int) []byte {
 func (self *Flow) installFlowActions(flowMod *openflow15.FlowMod,
 	instr openflow15.Instruction) error {
 	var actInstr openflow15.Instruction
-	var addActn bool = false
+	addActn := false
 	var err error
 
 	// Create a apply_action instruction to be used if its not already created
@@ -1530,15 +1530,16 @@ func (self *Flow) SetMacSa(macSa net.HardwareAddr) error {
 func (self *Flow) SetIPField(ip net.IP, field string) error {
 	action := new(FlowAction)
 	action.ipAddr = ip
-	if field == "Src" {
+	switch field {
+	case "Src":
 		action.ActionType = ActTypeSetSrcIP
-	} else if field == "Dst" {
+	case "Dst":
 		action.ActionType = ActTypeSetDstIP
-	} else if field == "TunSrc" {
+	case "TunSrc":
 		action.ActionType = ActTypeSetTunnelSrcIP
-	} else if field == "TunDst" {
+	case "TunDst":
 		action.ActionType = ActTypeSetTunnelDstIP
-	} else {
+	default:
 		return errors.New("field not supported")
 	}
 
@@ -1604,22 +1605,16 @@ func (self *Flow) SetL4Field(port uint16, field string) error {
 	switch field {
 	case "TCPSrc":
 		action.ActionType = ActTypeSetTCPsPort
-		break
 	case "TCPDst":
 		action.ActionType = ActTypeSetTCPdPort
-		break
 	case "UDPSrc":
 		action.ActionType = ActTypeSetUDPsPort
-		break
 	case "UDPDst":
 		action.ActionType = ActTypeSetUDPdPort
-		break
 	case "SCTPSrc":
 		action.ActionType = ActTypeSetSCTPsPort
-		break
 	case "SCTPDst":
 		action.ActionType = ActTypeSetSCTPdPort
-		break
 	default:
 		return errors.New("field not supported")
 	}

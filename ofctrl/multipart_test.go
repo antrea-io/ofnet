@@ -42,7 +42,7 @@ func testTableFeatures(t *testing.T, app *multipartActor) {
 		Flags:  0,
 	}
 	mpartRequest.Header.Type = openflow15.Type_MultiPartRequest
-	mpartRequest.Header.Length = mpartRequest.Len()
+	mpartRequest.Length = mpartRequest.Len()
 	ch := make(chan *openflow15.MultipartReply)
 	xid := mpartRequest.Xid
 	app.expectedTxs[xid] = ch

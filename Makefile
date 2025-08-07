@@ -6,7 +6,7 @@ DOCKER_CACHE       := $(CURDIR)/.cache
 OVS_VERSION        := $(shell head -n 1 build/images/deps/ovs-version)
 GO_VERSION         := $(shell head -n 1 build/images/deps/go-version)
 
-GOLANGCI_LINT_VERSION := v1.60.3
+GOLANGCI_LINT_VERSION := v2.3.1
 GOLANGCI_LINT_BINDIR  := .golangci-bin
 GOLANGCI_LINT_BIN     := $(GOLANGCI_LINT_BINDIR)/$(GOLANGCI_LINT_VERSION)/golangci-lint
 
