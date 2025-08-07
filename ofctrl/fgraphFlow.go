@@ -205,10 +205,10 @@ func (m *FlowBundleMessage) GetMessage() util.Message {
 
 // string key for the flow
 // FIXME: simple json conversion for now. This needs to be smarter
-func (self *Flow) flowKey() string {
-	jsonVal, err := json.Marshal(self.Match)
+func (f *Flow) flowKey() string {
+	jsonVal, err := json.Marshal(f.Match)
 	if err != nil {
-		log.Errorf("Error forming flowkey for %+v. Err: %v", self, err)
+		log.Errorf("Error forming flowkey for %+v. Err: %v", f, err)
 		return ""
 	}
 
@@ -216,166 +216,166 @@ func (self *Flow) flowKey() string {
 }
 
 // Fgraph element type for the flow
-func (self *Flow) Type() string {
+func (f *Flow) Type() string {
 	return "flow"
 }
 
 // instruction set for flow element
-func (self *Flow) GetFlowInstr() openflow15.Instruction {
+func (f *Flow) GetFlowInstr() openflow15.Instruction {
 	log.Fatalf("Unexpected call to get flow's instruction set")
 	return nil
 }
 
 // Translate our match fields into openflow 1.5 match fields
-func (self *Flow) xlateMatch() openflow15.Match {
+func (f *Flow) xlateMatch() openflow15.Match {
 	ofMatch := openflow15.NewMatch()
 
 	// Handle input port
-	if self.Match.InputPort != 0 {
-		inportField := openflow15.NewInPortField(self.Match.InputPort)
+	if f.Match.InputPort != 0 {
+		inportField := openflow15.NewInPortField(f.Match.InputPort)
 		ofMatch.AddField(*inportField)
 	}
 
 	// Handle MacDa field
-	if self.Match.MacDa != nil {
-		if self.Match.MacDaMask != nil {
-			macDaField := openflow15.NewEthDstField(*self.Match.MacDa, self.Match.MacDaMask)
+	if f.Match.MacDa != nil {
+		if f.Match.MacDaMask != nil {
+			macDaField := openflow15.NewEthDstField(*f.Match.MacDa, f.Match.MacDaMask)
 			ofMatch.AddField(*macDaField)
 		} else {
-			macDaField := openflow15.NewEthDstField(*self.Match.MacDa, nil)
+			macDaField := openflow15.NewEthDstField(*f.Match.MacDa, nil)
 			ofMatch.AddField(*macDaField)
 		}
 	}
 
 	// Handle MacSa field
-	if self.Match.MacSa != nil {
-		if self.Match.MacSaMask != nil {
-			macSaField := openflow15.NewEthSrcField(*self.Match.MacSa, self.Match.MacSaMask)
+	if f.Match.MacSa != nil {
+		if f.Match.MacSaMask != nil {
+			macSaField := openflow15.NewEthSrcField(*f.Match.MacSa, f.Match.MacSaMask)
 			ofMatch.AddField(*macSaField)
 		} else {
-			macSaField := openflow15.NewEthSrcField(*self.Match.MacSa, nil)
+			macSaField := openflow15.NewEthSrcField(*f.Match.MacSa, nil)
 			ofMatch.AddField(*macSaField)
 		}
 	}
 
 	// Handle ethertype
-	if self.Match.Ethertype != 0 {
-		etypeField := openflow15.NewEthTypeField(self.Match.Ethertype)
+	if f.Match.Ethertype != 0 {
+		etypeField := openflow15.NewEthTypeField(f.Match.Ethertype)
 		ofMatch.AddField(*etypeField)
 	}
 
 	// Handle Vlan id
-	if self.Match.NonVlan {
+	if f.Match.NonVlan {
 		vidField := openflow15.NewVlanIdField(0, nil)
 		vidField.Value = new(openflow15.VlanIdField)
 		ofMatch.AddField(*vidField)
-	} else if self.Match.VlanId != nil {
-		vidField := openflow15.NewVlanIdField(*self.Match.VlanId, self.Match.VlanMask)
+	} else if f.Match.VlanId != nil {
+		vidField := openflow15.NewVlanIdField(*f.Match.VlanId, f.Match.VlanMask)
 		ofMatch.AddField(*vidField)
 	}
 
 	// Handle ARP Oper type
-	if self.Match.ArpOper != 0 {
-		arpOperField := openflow15.NewArpOperField(self.Match.ArpOper)
+	if f.Match.ArpOper != 0 {
+		arpOperField := openflow15.NewArpOperField(f.Match.ArpOper)
 		ofMatch.AddField(*arpOperField)
 	}
 
 	// Handle ARP THA
-	if self.Match.ArpTha != nil {
-		arpTHAField := openflow15.NewArpThaField(*self.Match.ArpTha)
+	if f.Match.ArpTha != nil {
+		arpTHAField := openflow15.NewArpThaField(*f.Match.ArpTha)
 		ofMatch.AddField(*arpTHAField)
 	}
 
 	// Handle ARP SHA
-	if self.Match.ArpSha != nil {
-		arpSHAField := openflow15.NewArpShaField(*self.Match.ArpSha)
+	if f.Match.ArpSha != nil {
+		arpSHAField := openflow15.NewArpShaField(*f.Match.ArpSha)
 		ofMatch.AddField(*arpSHAField)
 	}
 
 	// Handle ARP TPA
-	if self.Match.ArpTpa != nil {
-		arpTPAField := openflow15.NewArpTpaField(*self.Match.ArpTpa)
+	if f.Match.ArpTpa != nil {
+		arpTPAField := openflow15.NewArpTpaField(*f.Match.ArpTpa)
 		ofMatch.AddField(*arpTPAField)
 	}
 
 	// Handle ARP SPA
-	if self.Match.ArpSpa != nil {
-		arpSPAField := openflow15.NewArpSpaField(*self.Match.ArpSpa)
+	if f.Match.ArpSpa != nil {
+		arpSPAField := openflow15.NewArpSpaField(*f.Match.ArpSpa)
 		ofMatch.AddField(*arpSPAField)
 	}
 
 	// Handle IP Dst
-	if self.Match.IpDa != nil {
-		if self.Match.IpDa.To4() != nil {
-			ipDaField := openflow15.NewIpv4DstField(*self.Match.IpDa, self.Match.IpDaMask)
+	if f.Match.IpDa != nil {
+		if f.Match.IpDa.To4() != nil {
+			ipDaField := openflow15.NewIpv4DstField(*f.Match.IpDa, f.Match.IpDaMask)
 			ofMatch.AddField(*ipDaField)
 		} else {
-			ipv6DaField := openflow15.NewIpv6DstField(*self.Match.IpDa, self.Match.IpDaMask)
+			ipv6DaField := openflow15.NewIpv6DstField(*f.Match.IpDa, f.Match.IpDaMask)
 			ofMatch.AddField(*ipv6DaField)
 		}
 	}
 
 	// Handle IP Src
-	if self.Match.IpSa != nil {
-		if self.Match.IpSa.To4() != nil {
-			ipSaField := openflow15.NewIpv4SrcField(*self.Match.IpSa, self.Match.IpSaMask)
+	if f.Match.IpSa != nil {
+		if f.Match.IpSa.To4() != nil {
+			ipSaField := openflow15.NewIpv4SrcField(*f.Match.IpSa, f.Match.IpSaMask)
 			ofMatch.AddField(*ipSaField)
 		} else {
-			ipv6SaField := openflow15.NewIpv6SrcField(*self.Match.IpSa, self.Match.IpSaMask)
+			ipv6SaField := openflow15.NewIpv6SrcField(*f.Match.IpSa, f.Match.IpSaMask)
 			ofMatch.AddField(*ipv6SaField)
 		}
 	}
 
 	// Handle IP protocol
-	if self.Match.IpProto != 0 {
-		protoField := openflow15.NewIpProtoField(self.Match.IpProto)
+	if f.Match.IpProto != 0 {
+		protoField := openflow15.NewIpProtoField(f.Match.IpProto)
 		ofMatch.AddField(*protoField)
 	}
 
 	// Handle IP dscp
-	if self.Match.IpDscp != 0 {
-		dscpField := openflow15.NewIpDscpField(self.Match.IpDscp, nil)
+	if f.Match.IpDscp != 0 {
+		dscpField := openflow15.NewIpDscpField(f.Match.IpDscp, nil)
 		ofMatch.AddField(*dscpField)
 	}
 
 	// Handle port numbers
-	if self.Match.SrcPort != 0 {
+	if f.Match.SrcPort != 0 {
 		var portField *openflow15.MatchField
-		switch self.Match.IpProto {
+		switch f.Match.IpProto {
 		case IP_PROTO_UDP:
-			portField = openflow15.NewUdpSrcField(self.Match.SrcPort)
+			portField = openflow15.NewUdpSrcField(f.Match.SrcPort)
 		case IP_PROTO_SCTP:
-			portField = openflow15.NewSctpSrcField(self.Match.SrcPort)
+			portField = openflow15.NewSctpSrcField(f.Match.SrcPort)
 		case IP_PROTO_TCP:
 			fallthrough
 		default:
-			portField = openflow15.NewTcpSrcField(self.Match.SrcPort)
+			portField = openflow15.NewTcpSrcField(f.Match.SrcPort)
 		}
 
-		if self.Match.SrcPortMask != nil {
+		if f.Match.SrcPortMask != nil {
 			portField.HasMask = true
-			portMaskField := openflow15.NewPortField(*self.Match.SrcPortMask)
+			portMaskField := openflow15.NewPortField(*f.Match.SrcPortMask)
 			portField.Mask = portMaskField
 			portField.Length += uint8(portMaskField.Len())
 		}
 		ofMatch.AddField(*portField)
 	}
 
-	if self.Match.DstPort != 0 {
+	if f.Match.DstPort != 0 {
 		var portField *openflow15.MatchField
-		switch self.Match.IpProto {
+		switch f.Match.IpProto {
 		case IP_PROTO_UDP:
-			portField = openflow15.NewUdpDstField(self.Match.DstPort)
+			portField = openflow15.NewUdpDstField(f.Match.DstPort)
 		case IP_PROTO_SCTP:
-			portField = openflow15.NewSctpDstField(self.Match.DstPort)
+			portField = openflow15.NewSctpDstField(f.Match.DstPort)
 		case IP_PROTO_TCP:
 			fallthrough
 		default:
-			portField = openflow15.NewTcpDstField(self.Match.DstPort)
+			portField = openflow15.NewTcpDstField(f.Match.DstPort)
 		}
-		if self.Match.DstPortMask != nil {
+		if f.Match.DstPortMask != nil {
 			portField.HasMask = true
-			portMaskField := openflow15.NewPortField(*self.Match.DstPortMask)
+			portMaskField := openflow15.NewPortField(*f.Match.DstPortMask)
 			portField.Mask = portMaskField
 			portField.Length += uint8(portMaskField.Len())
 		}
@@ -383,55 +383,55 @@ func (self *Flow) xlateMatch() openflow15.Match {
 	}
 
 	// Handle tcp flags
-	if self.Match.IpProto == IP_PROTO_TCP && self.Match.TcpFlags != nil {
-		tcpFlagField := openflow15.NewTcpFlagsField(*self.Match.TcpFlags, self.Match.TcpFlagsMask)
+	if f.Match.IpProto == IP_PROTO_TCP && f.Match.TcpFlags != nil {
+		tcpFlagField := openflow15.NewTcpFlagsField(*f.Match.TcpFlags, f.Match.TcpFlagsMask)
 		ofMatch.AddField(*tcpFlagField)
 	}
 
 	// Handle metadata
-	if self.Match.Metadata != nil {
-		if self.Match.MetadataMask != nil {
-			metadataField := openflow15.NewMetadataField(*self.Match.Metadata, self.Match.MetadataMask)
+	if f.Match.Metadata != nil {
+		if f.Match.MetadataMask != nil {
+			metadataField := openflow15.NewMetadataField(*f.Match.Metadata, f.Match.MetadataMask)
 			ofMatch.AddField(*metadataField)
 		} else {
-			metadataField := openflow15.NewMetadataField(*self.Match.Metadata, nil)
+			metadataField := openflow15.NewMetadataField(*f.Match.Metadata, nil)
 			ofMatch.AddField(*metadataField)
 		}
 	}
 
 	// Handle Vxlan tunnel id
-	if self.Match.TunnelId != 0 {
-		tunnelIdField := openflow15.NewTunnelIdField(self.Match.TunnelId)
+	if f.Match.TunnelId != 0 {
+		tunnelIdField := openflow15.NewTunnelIdField(f.Match.TunnelId)
 		ofMatch.AddField(*tunnelIdField)
 	}
 
 	// Handle IPv4 tunnel destination addr
-	if self.Match.TunnelDst != nil {
-		if ipv4Dst := self.Match.TunnelDst.To4(); ipv4Dst != nil {
+	if f.Match.TunnelDst != nil {
+		if ipv4Dst := f.Match.TunnelDst.To4(); ipv4Dst != nil {
 			tunnelDstField := openflow15.NewTunnelIpv4DstField(ipv4Dst, nil)
 			ofMatch.AddField(*tunnelDstField)
 		} else {
-			tunnelIpv6DstField := openflow15.NewTunnelIpv6DstField(*self.Match.TunnelDst, nil)
+			tunnelIpv6DstField := openflow15.NewTunnelIpv6DstField(*f.Match.TunnelDst, nil)
 			ofMatch.AddField(*tunnelIpv6DstField)
 		}
 	}
 
 	// Handle conjunction id
-	if self.Match.ConjunctionID != nil {
-		conjIDField := openflow15.NewConjIDMatchField(*self.Match.ConjunctionID)
+	if f.Match.ConjunctionID != nil {
+		conjIDField := openflow15.NewConjIDMatchField(*f.Match.ConjunctionID)
 		ofMatch.AddField(*conjIDField)
 	}
 
 	// Handle ct states
-	if self.Match.CtStates != nil {
-		ctStateField := openflow15.NewCTStateMatchField(self.Match.CtStates)
+	if f.Match.CtStates != nil {
+		ctStateField := openflow15.NewCTStateMatchField(f.Match.CtStates)
 		ofMatch.AddField(*ctStateField)
 	}
 
 	// Handle reg match
-	if self.Match.NxRegs != nil {
+	if f.Match.NxRegs != nil {
 		regMap := make(map[int][]*NXRegister)
-		for _, reg := range self.Match.NxRegs {
+		for _, reg := range f.Match.NxRegs {
 			_, found := regMap[reg.ID]
 			if !found {
 				regMap[reg.ID] = []*NXRegister{reg}
@@ -447,8 +447,8 @@ func (self *Flow) xlateMatch() openflow15.Match {
 	}
 
 	// Handle xxreg match
-	if self.Match.XxRegs != nil {
-		for _, reg := range self.Match.XxRegs {
+	if f.Match.XxRegs != nil {
+		for _, reg := range f.Match.XxRegs {
 			fieldName := fmt.Sprintf("NXM_NX_XXReg%d", reg.ID)
 			field, _ := openflow15.FindFieldHeaderByName(fieldName, false)
 			field.Value = &openflow15.ByteArrayField{Data: reg.Data, Length: uint8(len(reg.Data))}
@@ -457,19 +457,19 @@ func (self *Flow) xlateMatch() openflow15.Match {
 	}
 
 	// Handle ct_mark match
-	if self.Match.CtMark != 0 || self.Match.CtMarkMask != nil {
-		ctMarkField := openflow15.NewCTMarkMatchField(self.Match.CtMark, self.Match.CtMarkMask)
+	if f.Match.CtMark != 0 || f.Match.CtMarkMask != nil {
+		ctMarkField := openflow15.NewCTMarkMatchField(f.Match.CtMark, f.Match.CtMarkMask)
 		ofMatch.AddField(*ctMarkField)
 	}
 
-	if self.Match.CtLabelHiMask != 0 || self.Match.CtLabelLoMask != 0 || self.Match.CtLabelHi != 0 || self.Match.CtLabelLo != 0 {
+	if f.Match.CtLabelHiMask != 0 || f.Match.CtLabelLoMask != 0 || f.Match.CtLabelHi != 0 || f.Match.CtLabelLo != 0 {
 		var buf [16]byte
-		binary.BigEndian.PutUint64(buf[:8], self.Match.CtLabelHi)
-		binary.BigEndian.PutUint64(buf[8:], self.Match.CtLabelLo)
-		if self.Match.CtLabelLoMask != 0 || self.Match.CtLabelHiMask != 0 {
+		binary.BigEndian.PutUint64(buf[:8], f.Match.CtLabelHi)
+		binary.BigEndian.PutUint64(buf[8:], f.Match.CtLabelLo)
+		if f.Match.CtLabelLoMask != 0 || f.Match.CtLabelHiMask != 0 {
 			var maskBuf [16]byte
-			binary.BigEndian.PutUint64(maskBuf[:8], self.Match.CtLabelHiMask)
-			binary.BigEndian.PutUint64(maskBuf[8:], self.Match.CtLabelLoMask)
+			binary.BigEndian.PutUint64(maskBuf[:8], f.Match.CtLabelHiMask)
+			binary.BigEndian.PutUint64(maskBuf[8:], f.Match.CtLabelLoMask)
 			ofMatch.AddField(*openflow15.NewCTLabelMatchField(buf, &maskBuf))
 		} else {
 			ofMatch.AddField(*openflow15.NewCTLabelMatchField(buf, nil))
@@ -477,14 +477,14 @@ func (self *Flow) xlateMatch() openflow15.Match {
 	}
 
 	// Handle actset_output match
-	if self.Match.ActsetOutput != 0 {
-		actsetOutputField := openflow15.NewActsetOutputField(self.Match.ActsetOutput)
+	if f.Match.ActsetOutput != 0 {
+		actsetOutputField := openflow15.NewActsetOutputField(f.Match.ActsetOutput)
 		ofMatch.AddField(*actsetOutputField)
 	}
 
 	// Handle tun_metadata match
-	if len(self.Match.TunMetadatas) > 0 {
-		for _, m := range self.Match.TunMetadatas {
+	if len(f.Match.TunMetadatas) > 0 {
+		for _, m := range f.Match.TunMetadatas {
 			data := getDataBytes(m.Data, m.Range)
 			var mask []byte
 			if m.Range != nil {
@@ -497,14 +497,14 @@ func (self *Flow) xlateMatch() openflow15.Match {
 		}
 	}
 
-	if self.Match.CtIpSa != nil {
+	if f.Match.CtIpSa != nil {
 		ctIPSaField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_NW_SRC", false)
 		ctIPSaField.Value = &openflow15.Ipv4SrcField{
-			Ipv4Src: *self.Match.CtIpSa,
+			Ipv4Src: *f.Match.CtIpSa,
 		}
-		if self.Match.CtIpSaMask != nil {
+		if f.Match.CtIpSaMask != nil {
 			mask := new(openflow15.Ipv4SrcField)
-			mask.Ipv4Src = *self.Match.CtIpSaMask
+			mask.Ipv4Src = *f.Match.CtIpSaMask
 			ctIPSaField.HasMask = true
 			ctIPSaField.Mask = mask
 			ctIPSaField.Length += uint8(mask.Len())
@@ -512,14 +512,14 @@ func (self *Flow) xlateMatch() openflow15.Match {
 		ofMatch.AddField(*ctIPSaField)
 	}
 
-	if self.Match.CtIpDa != nil {
+	if f.Match.CtIpDa != nil {
 		ctIPDaField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_NW_DST", false)
 		ctIPDaField.Value = &openflow15.Ipv4DstField{
-			Ipv4Dst: *self.Match.CtIpDa,
+			Ipv4Dst: *f.Match.CtIpDa,
 		}
-		if self.Match.CtIpDaMask != nil {
+		if f.Match.CtIpDaMask != nil {
 			mask := new(openflow15.Ipv4DstField)
-			mask.Ipv4Dst = *self.Match.CtIpDaMask
+			mask.Ipv4Dst = *f.Match.CtIpDaMask
 			ctIPDaField.HasMask = true
 			ctIPDaField.Mask = mask
 			ctIPDaField.Length += uint8(mask.Len())
@@ -527,18 +527,18 @@ func (self *Flow) xlateMatch() openflow15.Match {
 		ofMatch.AddField(*ctIPDaField)
 	}
 
-	if self.Match.CtIpProto > 0 {
+	if f.Match.CtIpProto > 0 {
 		ctIPProtoField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_NW_PROTO", false)
-		ctIPProtoField.Value = &ProtocolField{Protocol: self.Match.CtIpProto}
+		ctIPProtoField.Value = &ProtocolField{Protocol: f.Match.CtIpProto}
 		ofMatch.AddField(*ctIPProtoField)
 	}
 
-	if self.Match.CtIpv6Sa != nil {
+	if f.Match.CtIpv6Sa != nil {
 		ctIPv6SaField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_IPV6_SRC", false)
-		ctIPv6SaField.Value = &openflow15.Ipv6SrcField{Ipv6Src: *self.Match.CtIpv6Sa}
-		if self.Match.CtIpv6SaMask != nil {
+		ctIPv6SaField.Value = &openflow15.Ipv6SrcField{Ipv6Src: *f.Match.CtIpv6Sa}
+		if f.Match.CtIpv6SaMask != nil {
 			mask := new(openflow15.Ipv6SrcField)
-			mask.Ipv6Src = *self.Match.CtIpv6SaMask
+			mask.Ipv6Src = *f.Match.CtIpv6SaMask
 			ctIPv6SaField.HasMask = true
 			ctIPv6SaField.Mask = mask
 			ctIPv6SaField.Length += uint8(mask.Len())
@@ -546,12 +546,12 @@ func (self *Flow) xlateMatch() openflow15.Match {
 		ofMatch.AddField(*ctIPv6SaField)
 	}
 
-	if self.Match.CtIpv6Da != nil {
+	if f.Match.CtIpv6Da != nil {
 		ctIPv6DaField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_IPV6_DST", false)
-		ctIPv6DaField.Value = &openflow15.Ipv6DstField{Ipv6Dst: *self.Match.CtIpv6Da}
-		if self.Match.CtIpv6DaMask != nil {
+		ctIPv6DaField.Value = &openflow15.Ipv6DstField{Ipv6Dst: *f.Match.CtIpv6Da}
+		if f.Match.CtIpv6DaMask != nil {
 			mask := new(openflow15.Ipv6DstField)
-			mask.Ipv6Dst = *self.Match.CtIpv6DaMask
+			mask.Ipv6Dst = *f.Match.CtIpv6DaMask
 			ctIPv6DaField.HasMask = true
 			ctIPv6DaField.Mask = mask
 			ctIPv6DaField.Length += uint8(mask.Len())
@@ -559,76 +559,76 @@ func (self *Flow) xlateMatch() openflow15.Match {
 		ofMatch.AddField(*ctIPv6DaField)
 	}
 
-	if self.Match.CtTpSrcPort > 0 {
+	if f.Match.CtTpSrcPort > 0 {
 		ctTpSrcPortField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_TP_SRC", false)
-		ctTpSrcPortField.Value = &PortField{Port: self.Match.CtTpSrcPort}
+		ctTpSrcPortField.Value = &PortField{Port: f.Match.CtTpSrcPort}
 		ofMatch.AddField(*ctTpSrcPortField)
 	}
 
-	if self.Match.CtTpDstPort > 0 {
+	if f.Match.CtTpDstPort > 0 {
 		ctTpDstPortField, _ := openflow15.FindFieldHeaderByName("NXM_NX_CT_TP_DST", false)
-		ctTpDstPortField.Value = &PortField{Port: self.Match.CtTpDstPort}
+		ctTpDstPortField.Value = &PortField{Port: f.Match.CtTpDstPort}
 		ofMatch.AddField(*ctTpDstPortField)
 	}
 
-	if self.Match.Icmp6Code != nil {
+	if f.Match.Icmp6Code != nil {
 		icmp6CodeField, _ := openflow15.FindFieldHeaderByName("NXM_NX_ICMPV6_CODE", false)
-		icmp6CodeField.Value = &openflow15.IcmpCodeField{Code: *self.Match.Icmp6Code}
+		icmp6CodeField.Value = &openflow15.IcmpCodeField{Code: *f.Match.Icmp6Code}
 		ofMatch.AddField(*icmp6CodeField)
 	}
 
-	if self.Match.Icmp6Type != nil {
+	if f.Match.Icmp6Type != nil {
 		icmp6TypeField, _ := openflow15.FindFieldHeaderByName("NXM_NX_ICMPV6_Type", false)
-		icmp6TypeField.Value = &openflow15.IcmpTypeField{Type: *self.Match.Icmp6Type}
+		icmp6TypeField.Value = &openflow15.IcmpTypeField{Type: *f.Match.Icmp6Type}
 		ofMatch.AddField(*icmp6TypeField)
 	}
 
-	if self.Match.NdTarget != nil {
-		ndTargetField, _ := openflow15.FindFieldHeaderByName("NXM_NX_ND_TARGET", self.Match.NdTargetMask != nil)
-		ndTargetField.Value = &openflow15.Ipv6DstField{Ipv6Dst: *self.Match.NdTarget}
-		if self.Match.NdTargetMask != nil {
-			ndTargetField.Mask = &openflow15.Ipv6DstField{Ipv6Dst: *self.Match.NdTargetMask}
+	if f.Match.NdTarget != nil {
+		ndTargetField, _ := openflow15.FindFieldHeaderByName("NXM_NX_ND_TARGET", f.Match.NdTargetMask != nil)
+		ndTargetField.Value = &openflow15.Ipv6DstField{Ipv6Dst: *f.Match.NdTarget}
+		if f.Match.NdTargetMask != nil {
+			ndTargetField.Mask = &openflow15.Ipv6DstField{Ipv6Dst: *f.Match.NdTargetMask}
 		}
 		ofMatch.AddField(*ndTargetField)
 	}
 
-	if self.Match.NdSll != nil {
+	if f.Match.NdSll != nil {
 		ndSllField, _ := openflow15.FindFieldHeaderByName("NXM_NX_ND_SLL", false)
-		ndSllField.Value = &openflow15.EthSrcField{EthSrc: *self.Match.NdSll}
+		ndSllField.Value = &openflow15.EthSrcField{EthSrc: *f.Match.NdSll}
 		ofMatch.AddField(*ndSllField)
 	}
 
-	if self.Match.NdTll != nil {
+	if f.Match.NdTll != nil {
 		ndTllField, _ := openflow15.FindFieldHeaderByName("NXM_NX_ND_TLL", false)
-		ndTllField.Value = &openflow15.EthDstField{EthDst: *self.Match.NdTll}
+		ndTllField.Value = &openflow15.EthDstField{EthDst: *f.Match.NdTll}
 		ofMatch.AddField(*ndTllField)
 	}
 
-	if self.Match.IpTtl != nil {
+	if f.Match.IpTtl != nil {
 		ipTtlField, _ := openflow15.FindFieldHeaderByName("NXM_NX_IP_TTL", false)
-		ipTtlField.Value = &openflow15.TtlField{Ttl: *self.Match.IpTtl}
+		ipTtlField.Value = &openflow15.TtlField{Ttl: *f.Match.IpTtl}
 		ofMatch.AddField(*ipTtlField)
 	}
 
 	// Handle pkt_mark match
-	if self.Match.PktMark != 0 {
-		pktMarkField, _ := openflow15.FindFieldHeaderByName("NXM_NX_PKT_MARK", self.Match.PktMarkMask != nil)
-		pktMarkField.Value = &openflow15.Uint32Message{Data: self.Match.PktMark}
-		if self.Match.PktMarkMask != nil {
-			pktMarkField.Mask = &openflow15.Uint32Message{Data: *self.Match.PktMarkMask}
+	if f.Match.PktMark != 0 {
+		pktMarkField, _ := openflow15.FindFieldHeaderByName("NXM_NX_PKT_MARK", f.Match.PktMarkMask != nil)
+		pktMarkField.Value = &openflow15.Uint32Message{Data: f.Match.PktMark}
+		if f.Match.PktMarkMask != nil {
+			pktMarkField.Mask = &openflow15.Uint32Message{Data: *f.Match.PktMarkMask}
 		}
 		ofMatch.AddField(*pktMarkField)
 	}
 
-	if self.Match.Icmp4Code != nil {
+	if f.Match.Icmp4Code != nil {
 		icmp4CodeField, _ := openflow15.FindFieldHeaderByName("NXM_OF_ICMP_CODE", false)
-		icmp4CodeField.Value = &openflow15.IcmpCodeField{Code: *self.Match.Icmp4Code}
+		icmp4CodeField.Value = &openflow15.IcmpCodeField{Code: *f.Match.Icmp4Code}
 		ofMatch.AddField(*icmp4CodeField)
 	}
 
-	if self.Match.Icmp4Type != nil {
+	if f.Match.Icmp4Type != nil {
 		icmp4TypeField, _ := openflow15.FindFieldHeaderByName("NXM_OF_ICMP_TYPE", false)
-		icmp4TypeField.Value = &openflow15.IcmpTypeField{Type: *self.Match.Icmp4Type}
+		icmp4TypeField.Value = &openflow15.IcmpTypeField{Type: *f.Match.Icmp4Type}
 		ofMatch.AddField(*icmp4TypeField)
 	}
 
@@ -749,7 +749,7 @@ func getMaskBytes(start, length int) []byte {
 }
 
 // Install all flow Actions
-func (self *Flow) installFlowActions(flowMod *openflow15.FlowMod,
+func (f *Flow) installFlowActions(flowMod *openflow15.FlowMod,
 	instr openflow15.Instruction) error {
 	var actInstr openflow15.Instruction
 	addActn := false
@@ -765,8 +765,8 @@ func (self *Flow) installFlowActions(flowMod *openflow15.FlowMod,
 
 	// Loop thru all Actions in reversed order, and prepend the action into instruction, so that the Actions is in the
 	// order as it is added by the client.
-	for i := len(self.flowActions) - 1; i >= 0; i-- {
-		flowAction := self.flowActions[i]
+	for i := len(f.flowActions) - 1; i >= 0; i-- {
+		flowAction := f.flowActions[i]
 		switch flowAction.ActionType {
 		case ActTypeSetVlan:
 			// Push Vlan Tag action
@@ -1253,41 +1253,41 @@ func (self *Flow) installFlowActions(flowMod *openflow15.FlowMod,
 }
 
 // GenerateFlowModMessage translates the Flow a FlowMod message according to the commandType.
-func (self *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.FlowMod, err error) {
+func (f *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.FlowMod, err error) {
 	// Create a flowmode entry
 	flowMod = openflow15.NewFlowMod()
-	flowMod.TableId = self.Table.TableId
-	flowMod.Priority = self.Match.Priority
+	flowMod.TableId = f.Table.TableId
+	flowMod.Priority = f.Match.Priority
 	// Cookie ID could be set by client, using globalFlowID if not set
-	if self.CookieID == 0 {
-		self.CookieID = globalFlowID // FIXME: need a better id allocation
+	if f.CookieID == 0 {
+		f.CookieID = globalFlowID // FIXME: need a better id allocation
 		globalFlowID += 1
 	}
-	flowMod.Cookie = self.CookieID
-	if self.CookieMask != nil {
-		flowMod.CookieMask = *self.CookieMask
+	flowMod.Cookie = f.CookieID
+	if f.CookieMask != nil {
+		flowMod.CookieMask = *f.CookieMask
 	}
-	if self.HardTimeout > 0 {
-		flowMod.HardTimeout = self.HardTimeout
+	if f.HardTimeout > 0 {
+		flowMod.HardTimeout = f.HardTimeout
 	}
-	if self.IdleTimeout > 0 {
-		flowMod.IdleTimeout = self.IdleTimeout
+	if f.IdleTimeout > 0 {
+		flowMod.IdleTimeout = f.IdleTimeout
 	}
 	flowMod.Command = uint8(commandType)
 
 	// convert match fields to openflow 1.5 format
-	flowMod.Match = self.xlateMatch()
+	flowMod.Match = f.xlateMatch()
 	log.Debugf("flow install: Match: %+v", flowMod.Match)
 	if commandType != openflow15.FC_DELETE && commandType != openflow15.FC_DELETE_STRICT {
 
 		// Based on the next elem, decide what to install
-		switch self.NextElem.Type() {
+		switch f.NextElem.Type() {
 		case "table":
 			// Get the instruction set from the element
-			instr := self.NextElem.GetFlowInstr()
+			instr := f.NextElem.GetFlowInstr()
 
 			// Check if there are any flow actions to perform
-			err = self.installFlowActions(flowMod, instr)
+			err = f.installFlowActions(flowMod, instr)
 			if err != nil {
 				return
 			}
@@ -1301,14 +1301,14 @@ func (self *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.F
 			fallthrough
 		case "output":
 			// Get the instruction set from the element
-			instr := self.NextElem.GetFlowInstr()
+			instr := f.NextElem.GetFlowInstr()
 
 			// Add the instruction to flowmod if its not nil
 			// a nil instruction means drop action
 			if instr != nil {
 
 				// Check if there are any flow actions to perform
-				err = self.installFlowActions(flowMod, instr)
+				err = f.installFlowActions(flowMod, instr)
 				if err != nil {
 					return
 				}
@@ -1321,14 +1321,14 @@ func (self *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.F
 			fallthrough
 		case "Resubmit":
 			// Get the instruction set from the element
-			instr := self.NextElem.GetFlowInstr()
+			instr := f.NextElem.GetFlowInstr()
 
 			// Add the instruction to flowmod if its not nil
 			// a nil instruction means drop action
 			if instr != nil {
 
 				// Check if there are any flow actions to perform
-				err = self.installFlowActions(flowMod, instr)
+				err = f.installFlowActions(flowMod, instr)
 				if err != nil {
 					return
 				}
@@ -1339,11 +1339,11 @@ func (self *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.F
 			}
 		case "empty":
 			// Get the instruction set from the element. This instruction is InstrActions with no actions
-			instr := self.NextElem.GetFlowInstr()
+			instr := f.NextElem.GetFlowInstr()
 			if instr != nil {
 
 				// Check if there are any flow actions to perform
-				err = self.installFlowActions(flowMod, instr)
+				err = f.installFlowActions(flowMod, instr)
 				if err != nil {
 					return
 				}
@@ -1355,7 +1355,7 @@ func (self *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.F
 			}
 
 		default:
-			log.Fatalf("Unknown Fgraph element type %s", self.NextElem.Type())
+			log.Fatalf("Unknown Fgraph element type %s", f.NextElem.Type())
 			err = UnknownElementTypeError
 			return
 		}
@@ -1364,170 +1364,170 @@ func (self *Flow) GenerateFlowModMessage(commandType int) (flowMod *openflow15.F
 }
 
 // Install a flow entry
-func (self *Flow) install() error {
+func (f *Flow) install() error {
 	command := openflow15.FC_MODIFY_STRICT
 	// Add or modify
-	if !self.isInstalled {
+	if !f.isInstalled {
 		command = openflow15.FC_ADD
 	}
-	flowMod, err := self.GenerateFlowModMessage(command)
+	flowMod, err := f.GenerateFlowModMessage(command)
 	if err != nil {
 		return err
 	}
 	log.Debugf("Sending flowmod: %+v", flowMod)
 
 	// Send the message
-	if err := self.Table.Switch.Send(flowMod); err != nil {
+	if err := f.Table.Switch.Send(flowMod); err != nil {
 		return err
 	}
 
 	// Mark it as installed
-	self.isInstalled = true
+	f.isInstalled = true
 
 	return nil
 }
 
 // updateInstallStatus changes isInstalled value.
-func (self *Flow) UpdateInstallStatus(installed bool) {
-	self.lock.Lock()
-	defer self.lock.Unlock()
-	self.isInstalled = installed
+func (f *Flow) UpdateInstallStatus(installed bool) {
+	f.lock.Lock()
+	defer f.lock.Unlock()
+	f.isInstalled = installed
 }
 
 // Set Next element in the Fgraph. This determines what actions will be
 // part of the flow's instruction set
-func (self *Flow) Next(elem FgraphElem) error {
-	self.lock.Lock()
-	defer self.lock.Unlock()
+func (f *Flow) Next(elem FgraphElem) error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Set the next element in the graph
-	self.NextElem = elem
+	f.NextElem = elem
 
 	// Install the flow entry
-	return self.install()
+	return f.install()
 }
 
 // Special action on the flow to set vlan id
-func (self *Flow) SetVlan(vlanId uint16) error {
+func (f *Flow) SetVlan(vlanId uint16) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetVlan
 	action.vlanId = vlanId
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set vlan id
-func (self *Flow) PopVlan() error {
+func (f *Flow) PopVlan() error {
 	action := new(FlowAction)
 	action.ActionType = ActTypePopVlan
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to pop mpls ethertype
-func (self *Flow) PopMpls(etherType uint16) error {
+func (f *Flow) PopMpls(etherType uint16) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypePopMpls
 	action.mplsEtherType = etherType
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to push mpls ethertype
-func (self *Flow) PushMpls(etherType uint16) error {
+func (f *Flow) PushMpls(etherType uint16) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypePushMpls
 	action.mplsEtherType = etherType
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set mac dest addr
-func (self *Flow) SetMacDa(macDa net.HardwareAddr) error {
+func (f *Flow) SetMacDa(macDa net.HardwareAddr) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetDstMac
 	action.macAddr = macDa
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set mac source addr
-func (self *Flow) SetMacSa(macSa net.HardwareAddr) error {
+func (f *Flow) SetMacSa(macSa net.HardwareAddr) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetSrcMac
 	action.macAddr = macSa
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set an ip field
-func (self *Flow) SetIPField(ip net.IP, field string) error {
+func (f *Flow) SetIPField(ip net.IP, field string) error {
 	action := new(FlowAction)
 	action.ipAddr = ip
 	switch field {
@@ -1543,62 +1543,62 @@ func (self *Flow) SetIPField(ip net.IP, field string) error {
 		return errors.New("field not supported")
 	}
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set arp_spa field
-func (self *Flow) SetARPSpa(ip net.IP) error {
+func (f *Flow) SetARPSpa(ip net.IP) error {
 	action := new(FlowAction)
 	action.ipAddr = ip
 	action.ActionType = ActTypeSetARPSPA
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set arp_spa field
-func (self *Flow) SetARPTpa(ip net.IP) error {
+func (f *Flow) SetARPTpa(ip net.IP) error {
 	action := new(FlowAction)
 	action.ipAddr = ip
 	action.ActionType = ActTypeSetARPTPA
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set a L4 field
-func (self *Flow) SetL4Field(port uint16, field string) error {
+func (f *Flow) SetL4Field(port uint16, field string) error {
 	action := new(FlowAction)
 	action.l4Port = port
 
@@ -1619,202 +1619,202 @@ func (self *Flow) SetL4Field(port uint16, field string) error {
 		return errors.New("field not supported")
 	}
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special actions on the flow to set metadata
-func (self *Flow) SetMetadata(metadata, metadataMask uint64) error {
+func (f *Flow) SetMetadata(metadata, metadataMask uint64) error {
 	action := new(FlowAction)
 	action.ActionType = "setMetadata"
 	action.metadata = metadata
 	action.metadataMask = metadataMask
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special actions on the flow to set vlan id
-func (self *Flow) SetTunnelId(tunnelId uint64) error {
+func (f *Flow) SetTunnelId(tunnelId uint64) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetTunnelID
 	action.tunnelId = tunnelId
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special actions on the flow to set dscp field
-func (self *Flow) SetDscp(dscp uint8) error {
+func (f *Flow) SetDscp(dscp uint8) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetDSCP
 	action.dscp = dscp
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // unset dscp field
-func (self *Flow) UnsetDscp() error {
-	self.lock.Lock()
-	defer self.lock.Unlock()
+func (f *Flow) UnsetDscp() error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Delete to the action from db
-	for idx, act := range self.flowActions {
+	for idx, act := range f.flowActions {
 		if act.ActionType == ActTypeSetDSCP {
-			self.flowActions = append(self.flowActions[:idx], self.flowActions[idx+1:]...)
+			f.flowActions = append(f.flowActions[:idx], f.flowActions[idx+1:]...)
 		}
 	}
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
-func (self *Flow) SetARPOper(arpOp uint16) error {
+func (f *Flow) SetARPOper(arpOp uint16) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetARPOper
 	action.arpOper = arpOp
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set ARP source host addr
-func (self *Flow) SetARPSha(arpSha net.HardwareAddr) error {
+func (f *Flow) SetARPSha(arpSha net.HardwareAddr) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetARPSHA
 	action.macAddr = arpSha
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special action on the flow to set ARP target host addr
-func (self *Flow) SetARPTha(arpTha net.HardwareAddr) error {
+func (f *Flow) SetARPTha(arpTha net.HardwareAddr) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeSetARPTHA
 	action.macAddr = arpTha
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special Actions on the flow to load data into OXM/NXM field
-func (self *Flow) LoadReg(fieldName string, data uint64, dataRange *openflow15.NXRange) error {
+func (f *Flow) LoadReg(fieldName string, data uint64, dataRange *openflow15.NXRange) error {
 	loadAct, err := NewNXLoadAction(fieldName, data, dataRange)
 	if err != nil {
 		return err
 	}
-	if self.Table != nil && self.Table.Switch != nil {
-		loadAct.ResetFieldLength(self.Table.Switch)
+	if f.Table != nil && f.Table.Switch != nil {
+		loadAct.ResetFieldLength(f.Table.Switch)
 	}
 	action := new(FlowAction)
 	action.ActionType = loadAct.GetActionType()
 	action.loadAct = loadAct
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
-func (self *Flow) SetField(field *openflow15.MatchField) error {
+func (f *Flow) SetField(field *openflow15.MatchField) error {
 	setField := NewSetFieldAction(field)
 	action := new(FlowAction)
 	action.ActionType = setField.GetActionType()
 	action.setFieldAct = setField
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 	return nil
 }
 
-func (self *Flow) CopyField(nBits uint16, srcOffset uint16, dstOffset uint16,
+func (f *Flow) CopyField(nBits uint16, srcOffset uint16, dstOffset uint16,
 	srcOxmId *openflow15.OxmId, dstOxmId *openflow15.OxmId) error {
 	copyFieldAct := NewCopyFieldAction(nBits, srcOffset, dstOffset, srcOxmId, dstOxmId)
 	action := new(FlowAction)
@@ -1822,60 +1822,60 @@ func (self *Flow) CopyField(nBits uint16, srcOffset uint16, dstOffset uint16,
 	action.copyFieldAct = copyFieldAct
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 	return nil
 }
 
 // Special Actions on the flow to move data from src_field[rng] to dst_field[rng]
-func (self *Flow) MoveRegs(srcName string, dstName string, srcRange *openflow15.NXRange, dstRange *openflow15.NXRange) error {
+func (f *Flow) MoveRegs(srcName string, dstName string, srcRange *openflow15.NXRange, dstRange *openflow15.NXRange) error {
 	moveAct, err := NewNXMoveAction(srcName, dstName, srcRange, dstRange)
 	if err != nil {
 		return err
 	}
-	if self.Table != nil && self.Table.Switch != nil {
-		moveAct.ResetFieldsLength(self.Table.Switch)
+	if f.Table != nil && f.Table.Switch != nil {
+		moveAct.ResetFieldsLength(f.Table.Switch)
 	}
 
 	action := new(FlowAction)
 	action.ActionType = moveAct.GetActionType()
 	action.moveAct = moveAct
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
-func (self *Flow) Resubmit(ofPort uint16, tableID uint8) error {
+func (f *Flow) Resubmit(ofPort uint16, tableID uint8) error {
 	action := new(FlowAction)
 	action.resubmit = NewResubmit(&ofPort, &tableID)
 	action.ActionType = action.resubmit.GetActionType()
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special actions on the flow for connection trackng
-func (self *Flow) ConnTrack(commit bool, force bool, tableID *uint8, zoneID *uint16, execActions ...openflow15.Action) error {
+func (f *Flow) ConnTrack(commit bool, force bool, tableID *uint8, zoneID *uint16, execActions ...openflow15.Action) error {
 	connTrack := &NXConnTrackAction{
 		commit:  commit,
 		force:   force,
@@ -1886,14 +1886,14 @@ func (self *Flow) ConnTrack(commit bool, force bool, tableID *uint8, zoneID *uin
 	action := new(FlowAction)
 	action.ActionType = connTrack.GetActionType()
 	action.connTrack = connTrack
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
@@ -1905,7 +1905,7 @@ func (self *Flow) ConnTrack(commit bool, force bool, tableID *uint8, zoneID *uin
 //  2. clause value should be less than or equals to ncluase, and its value should be started from 1.
 //     actual clause in libopenflow messages is started from 0, here would decrement 1 to keep the display
 //     value is consistent with expected configuration
-func (self *Flow) AddConjunction(conjID uint32, clause uint8, nClause uint8) error {
+func (f *Flow) AddConjunction(conjID uint32, clause uint8, nClause uint8) error {
 	conjunction, err := NewNXConjunctionAction(conjID, clause, nClause)
 	if err != nil {
 		return nil
@@ -1914,31 +1914,31 @@ func (self *Flow) AddConjunction(conjID uint32, clause uint8, nClause uint8) err
 	action := new(FlowAction)
 	action.ActionType = conjunction.GetActionType()
 	action.conjunction = conjunction
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
-func (self *Flow) DelConjunction(conjID uint32) error {
+func (f *Flow) DelConjunction(conjID uint32) error {
 	found := false
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Remove conjunction from the action db
-	for i, act := range self.flowActions {
+	for i, act := range f.flowActions {
 		if act.ActionType == ActTypeNXConjunction {
 			conjuncAct := act.conjunction
 			if conjID == conjuncAct.ID {
-				self.flowActions = append(self.flowActions[:i], self.flowActions[i+1:]...)
+				f.flowActions = append(f.flowActions[:i], f.flowActions[i+1:]...)
 				found = true
 			}
 		}
@@ -1949,69 +1949,69 @@ func (self *Flow) DelConjunction(conjID uint32) error {
 	}
 
 	// Return EmptyFlowActionError if there is no Actions left in flow
-	if len(self.flowActions) == 0 {
+	if len(f.flowActions) == 0 {
 		return EmptyFlowActionError
 	}
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special Actions to the flow to dec TTL
-func (self *Flow) DecTTL() error {
+func (f *Flow) DecTTL() error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeDecTTL
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Special Actions to the flow to learn from the current packet and generate a new flow entry.
-func (self *Flow) Learn(learn *FlowLearn) error {
+func (f *Flow) Learn(learn *FlowLearn) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeNXLearn
 	action.learn = learn
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
-func (self *Flow) Note(data []byte) error {
+func (f *Flow) Note(data []byte) error {
 	action := new(FlowAction)
 	action.ActionType = ActTypeNXNote
 	action.notes = data
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
-func (self *Flow) OutputReg(name string, start int, end int) error {
+func (f *Flow) OutputReg(name string, start int, end int) error {
 	action := new(FlowAction)
 	var err error
 	action.nxOutput, err = NewNXOutput(name, start, end)
@@ -2020,106 +2020,106 @@ func (self *Flow) OutputReg(name string, start int, end int) error {
 	}
 	action.ActionType = action.nxOutput.GetActionType()
 
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
-func (self *Flow) Controller(reason uint8) error {
+func (f *Flow) Controller(reason uint8) error {
 	action := new(FlowAction)
 	action.controller = &NXController{
-		ControllerID: self.Table.Switch.ctrlID,
+		ControllerID: f.Table.Switch.ctrlID,
 		Reason:       reason,
 	}
 	action.ActionType = action.controller.GetActionType()
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Add to the action db
-	self.flowActions = append(self.flowActions, action)
+	f.flowActions = append(f.flowActions, action)
 	// If the flow entry was already installed, re-install it
-	if self.isInstalled {
-		return self.install()
+	if f.isInstalled {
+		return f.install()
 	}
 
 	return nil
 }
 
 // Delete the flow
-func (self *Flow) Delete() error {
-	self.lock.Lock()
-	defer self.lock.Unlock()
+func (f *Flow) Delete() error {
+	f.lock.Lock()
+	defer f.lock.Unlock()
 
 	// Delete from ofswitch
-	if self.isInstalled {
+	if f.isInstalled {
 		// Create a flowmode entry
 		flowMod := openflow15.NewFlowMod()
 		flowMod.Command = openflow15.FC_DELETE_STRICT
-		flowMod.TableId = self.Table.TableId
-		flowMod.Priority = self.Match.Priority
-		flowMod.Cookie = self.CookieID
-		if self.CookieMask != nil {
-			flowMod.CookieMask = *self.CookieMask
+		flowMod.TableId = f.Table.TableId
+		flowMod.Priority = f.Match.Priority
+		flowMod.Cookie = f.CookieID
+		if f.CookieMask != nil {
+			flowMod.CookieMask = *f.CookieMask
 		} else {
 			flowMod.CookieMask = ^uint64(0)
 		}
 		flowMod.OutPort = openflow15.P_ANY
 		flowMod.OutGroup = openflow15.OFPG_ANY
-		flowMod.Match = self.xlateMatch()
+		flowMod.Match = f.xlateMatch()
 
 		log.Debugf("Sending DELETE flowmod: %+v", flowMod)
 
 		// Send the message
-		if err := self.Table.Switch.Send(flowMod); err != nil {
+		if err := f.Table.Switch.Send(flowMod); err != nil {
 			return err
 		}
 	}
 
 	// Delete it from the Table
-	flowKey := self.flowKey()
-	return self.Table.DeleteFlow(flowKey)
+	flowKey := f.flowKey()
+	return f.Table.DeleteFlow(flowKey)
 }
 
-func (self *Flow) SetRealized() {
-	self.statusLock.Lock()
-	defer self.statusLock.Unlock()
-	self.realized = true
+func (f *Flow) SetRealized() {
+	f.statusLock.Lock()
+	defer f.statusLock.Unlock()
+	f.realized = true
 }
 
 // IsRealized gets flow realized status
-func (self *Flow) IsRealized() bool {
-	self.statusLock.Lock()
-	defer self.statusLock.Unlock()
-	return self.realized
+func (f *Flow) IsRealized() bool {
+	f.statusLock.Lock()
+	defer f.statusLock.Unlock()
+	return f.realized
 }
 
 // MonitorRealizeStatus sends MultipartRequest to get current flow status, it is calling if needs to check
 // flow's realized status
-func (self *Flow) MonitorRealizeStatus() {
-	stats, err := self.Table.Switch.DumpFlowStats(self.CookieID, self.CookieMask, &self.Match, &self.Table.TableId)
+func (f *Flow) MonitorRealizeStatus() {
+	stats, err := f.Table.Switch.DumpFlowStats(f.CookieID, f.CookieMask, &f.Match, &f.Table.TableId)
 	if err != nil {
-		self.realized = false
+		f.realized = false
 	}
 	if stats != nil {
-		self.realized = true
+		f.realized = true
 	}
 }
 
-func (self *Flow) GetBundleMessage(command int) (*FlowBundleMessage, error) {
+func (f *Flow) GetBundleMessage(command int) (*FlowBundleMessage, error) {
 	var flowMod *openflow15.FlowMod
 	var err error
-	if self.NextElem != nil {
-		flowMod, err = self.GenerateFlowModMessage(command)
+	if f.NextElem != nil {
+		flowMod, err = f.GenerateFlowModMessage(command)
 	} else {
-		flowMod, err = self.generateFlowMessage(command)
+		flowMod, err = f.generateFlowMessage(command)
 	}
 	if err != nil {
 		return nil, err
@@ -2127,85 +2127,85 @@ func (self *Flow) GetBundleMessage(command int) (*FlowBundleMessage, error) {
 	return &FlowBundleMessage{flowMod}, nil
 }
 
-func (self *Flow) ApplyAction(action OFAction) {
-	self.appliedActions = append(self.appliedActions, action)
+func (f *Flow) ApplyAction(action OFAction) {
+	f.appliedActions = append(f.appliedActions, action)
 }
 
-func (self *Flow) ApplyActions(actions []OFAction) {
-	self.appliedActions = append(self.appliedActions, actions...)
+func (f *Flow) ApplyActions(actions []OFAction) {
+	f.appliedActions = append(f.appliedActions, actions...)
 }
 
-func (self *Flow) ResetApplyActions(actions []OFAction) {
-	self.appliedActions = nil
-	self.ApplyActions(actions)
+func (f *Flow) ResetApplyActions(actions []OFAction) {
+	f.appliedActions = nil
+	f.ApplyActions(actions)
 }
 
-func (self *Flow) WriteAction(action OFAction) {
-	self.writtenActions = append(self.writtenActions, action)
+func (f *Flow) WriteAction(action OFAction) {
+	f.writtenActions = append(f.writtenActions, action)
 }
 
-func (self *Flow) WriteActions(actions []OFAction) {
-	self.writtenActions = append(self.writtenActions, actions...)
+func (f *Flow) WriteActions(actions []OFAction) {
+	f.writtenActions = append(f.writtenActions, actions...)
 }
 
-func (self *Flow) ResetWriteActions(actions []OFAction) {
-	self.writtenActions = nil
-	self.WriteActions(actions)
+func (f *Flow) ResetWriteActions(actions []OFAction) {
+	f.writtenActions = nil
+	f.WriteActions(actions)
 }
 
-func (self *Flow) WriteMetadata(metadata uint64, metadataMask uint64) {
-	self.metadata = &writeMetadata{metadata, metadataMask}
+func (f *Flow) WriteMetadata(metadata uint64, metadataMask uint64) {
+	f.metadata = &writeMetadata{metadata, metadataMask}
 }
 
-func (self *Flow) Goto(tableID uint8) {
-	self.gotoTable = &tableID
+func (f *Flow) Goto(tableID uint8) {
+	f.gotoTable = &tableID
 }
 
-func (self *Flow) ClearActions() {
-	self.clearActions = true
+func (f *Flow) ClearActions() {
+	f.clearActions = true
 }
 
-func (self *Flow) Drop() {
-	self.appliedActions = nil
-	self.metadata = nil
-	self.writtenActions = nil
-	self.clearActions = false
-	self.gotoTable = nil
-	self.meter = nil
+func (f *Flow) Drop() {
+	f.appliedActions = nil
+	f.metadata = nil
+	f.writtenActions = nil
+	f.clearActions = false
+	f.gotoTable = nil
+	f.meter = nil
 }
 
-func (self *Flow) generateFlowMessage(commandType int) (flowMod *openflow15.FlowMod, err error) {
+func (f *Flow) generateFlowMessage(commandType int) (flowMod *openflow15.FlowMod, err error) {
 	flowMod = openflow15.NewFlowMod()
-	flowMod.TableId = self.Table.TableId
-	flowMod.Priority = self.Match.Priority
+	flowMod.TableId = f.Table.TableId
+	flowMod.Priority = f.Match.Priority
 	// Cookie ID could be set by client, using globalFlowID if not set
-	if self.CookieID == 0 {
-		self.CookieID = globalFlowID // FIXME: need a better id allocation
+	if f.CookieID == 0 {
+		f.CookieID = globalFlowID // FIXME: need a better id allocation
 		globalFlowID += 1
 	}
-	flowMod.Cookie = self.CookieID
-	if self.CookieMask != nil {
-		flowMod.CookieMask = *self.CookieMask
+	flowMod.Cookie = f.CookieID
+	if f.CookieMask != nil {
+		flowMod.CookieMask = *f.CookieMask
 	}
-	if self.HardTimeout > 0 {
-		flowMod.HardTimeout = self.HardTimeout
+	if f.HardTimeout > 0 {
+		flowMod.HardTimeout = f.HardTimeout
 	}
-	if self.IdleTimeout > 0 {
-		flowMod.IdleTimeout = self.IdleTimeout
+	if f.IdleTimeout > 0 {
+		flowMod.IdleTimeout = f.IdleTimeout
 	}
 	flowMod.Command = uint8(commandType)
 
 	// convert match fields to openflow 1.5 format
-	flowMod.Match = self.xlateMatch()
+	flowMod.Match = f.xlateMatch()
 	log.Debugf("flow install: Match: %+v", flowMod.Match)
 	if commandType != openflow15.FC_DELETE && commandType != openflow15.FC_DELETE_STRICT {
-		if self.metadata != nil {
-			writeMdInstruction := openflow15.NewInstrWriteMetadata(self.metadata.data, self.metadata.mask)
+		if f.metadata != nil {
+			writeMdInstruction := openflow15.NewInstrWriteMetadata(f.metadata.data, f.metadata.mask)
 			flowMod.AddInstruction(writeMdInstruction)
 		}
-		if len(self.appliedActions) > 0 {
+		if len(f.appliedActions) > 0 {
 			appliedInstruction := openflow15.NewInstrApplyActions()
-			for _, act := range self.appliedActions {
+			for _, act := range f.appliedActions {
 				err := appliedInstruction.AddAction(act.GetActionMessage(), false)
 				if err != nil {
 					return nil, err
@@ -2213,7 +2213,7 @@ func (self *Flow) generateFlowMessage(commandType int) (flowMod *openflow15.Flow
 			}
 			flowMod.AddInstruction(appliedInstruction)
 		}
-		if self.clearActions {
+		if f.clearActions {
 			clearInstruction := new(openflow15.InstrActions)
 			clearInstruction.InstrHeader = openflow15.InstrHeader{
 				Type:   openflow15.InstrType_CLEAR_ACTIONS,
@@ -2221,17 +2221,17 @@ func (self *Flow) generateFlowMessage(commandType int) (flowMod *openflow15.Flow
 			}
 			flowMod.AddInstruction(clearInstruction)
 		}
-		if len(self.writtenActions) > 0 {
+		if len(f.writtenActions) > 0 {
 			writeInstruction := openflow15.NewInstrWriteActions()
-			for _, act := range self.writtenActions {
+			for _, act := range f.writtenActions {
 				if err := writeInstruction.AddAction(act.GetActionMessage(), false); err != nil {
 					return nil, err
 				}
 			}
 			flowMod.AddInstruction(writeInstruction)
 		}
-		if self.gotoTable != nil {
-			gotoTableInstruction := openflow15.NewInstrGotoTable(*self.gotoTable)
+		if f.gotoTable != nil {
+			gotoTableInstruction := openflow15.NewInstrGotoTable(*f.gotoTable)
 			flowMod.AddInstruction(gotoTableInstruction)
 		}
 	}
@@ -2239,20 +2239,20 @@ func (self *Flow) generateFlowMessage(commandType int) (flowMod *openflow15.Flow
 }
 
 // Send generates a FlowMod message according the operationType, and then sends it to the OFSwitch.
-func (self *Flow) Send(operationType int) error {
-	flowMod, err := self.generateFlowMessage(operationType)
+func (f *Flow) Send(operationType int) error {
+	flowMod, err := f.generateFlowMessage(operationType)
 	if err != nil {
 		return err
 	}
 	// Send the message
-	return self.Table.Switch.Send(flowMod)
+	return f.Table.Switch.Send(flowMod)
 }
 
-func (self *Flow) CopyActionsToNewFlow(newFlow *Flow) {
-	newFlow.appliedActions = self.appliedActions
-	newFlow.clearActions = self.clearActions
-	newFlow.writtenActions = self.writtenActions
-	newFlow.gotoTable = self.gotoTable
-	newFlow.metadata = self.metadata
-	newFlow.meter = self.meter
+func (f *Flow) CopyActionsToNewFlow(newFlow *Flow) {
+	newFlow.appliedActions = f.appliedActions
+	newFlow.clearActions = f.clearActions
+	newFlow.writtenActions = f.writtenActions
+	newFlow.gotoTable = f.gotoTable
+	newFlow.metadata = f.metadata
+	newFlow.meter = f.meter
 }

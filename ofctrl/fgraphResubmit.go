@@ -11,28 +11,28 @@ type Resubmit struct {
 }
 
 // Fgraph element type for the Resubmit
-func (self *Resubmit) Type() string {
+func (r *Resubmit) Type() string {
 	return "Resubmit"
 }
 
 // instruction set for resubmit element
-func (self *Resubmit) GetFlowInstr() openflow15.Instruction {
+func (r *Resubmit) GetFlowInstr() openflow15.Instruction {
 	outputInstr := openflow15.NewInstrApplyActions()
-	resubmitAct := self.GetActionMessage()
+	resubmitAct := r.GetActionMessage()
 	outputInstr.AddAction(resubmitAct, false)
 	return outputInstr
 }
 
 // Return a resubmit action (Used as a last action by flows in the table pipeline)
-func (self *Resubmit) GetActionMessage() openflow15.Action {
-	if self.withCT {
-		return openflow15.NewNXActionResubmitTableCT(self.ofport, self.nextTable)
+func (r *Resubmit) GetActionMessage() openflow15.Action {
+	if r.withCT {
+		return openflow15.NewNXActionResubmitTableCT(r.ofport, r.nextTable)
 	} else {
-		return openflow15.NewNXActionResubmitTableAction(self.ofport, self.nextTable)
+		return openflow15.NewNXActionResubmitTableAction(r.ofport, r.nextTable)
 	}
 }
 
-func (self *Resubmit) GetActionType() string {
+func (r *Resubmit) GetActionType() string {
 	return ActTypeNXResubmit
 }
 

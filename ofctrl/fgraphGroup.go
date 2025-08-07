@@ -40,74 +40,74 @@ type Group struct {
 	isInstalled bool
 }
 
-func (self *Group) Type() string {
+func (g *Group) Type() string {
 	return "group"
 }
 
-func (self *Group) GetActionMessage() openflow15.Action {
-	return openflow15.NewActionGroup(self.ID)
+func (g *Group) GetActionMessage() openflow15.Action {
+	return openflow15.NewActionGroup(g.ID)
 }
 
-func (self *Group) GetActionType() string {
+func (g *Group) GetActionType() string {
 	return ActTypeGroup
 }
 
-func (self *Group) GetFlowInstr() openflow15.Instruction {
+func (g *Group) GetFlowInstr() openflow15.Instruction {
 	groupInstr := openflow15.NewInstrApplyActions()
-	groupAct := self.GetActionMessage()
+	groupAct := g.GetActionMessage()
 	// Add group action to the instruction
 	groupInstr.AddAction(groupAct, false)
 	return groupInstr
 }
 
-func (self *Group) AddBuckets(buckets ...*openflow15.Bucket) {
-	if self.Buckets == nil {
-		self.Buckets = make([]*openflow15.Bucket, 0)
+func (g *Group) AddBuckets(buckets ...*openflow15.Bucket) {
+	if g.Buckets == nil {
+		g.Buckets = make([]*openflow15.Bucket, 0)
 	}
-	self.Buckets = append(self.Buckets, buckets...)
-	if self.isInstalled {
-		self.Install()
-	}
-}
-
-func (self *Group) ResetBuckets(buckets ...*openflow15.Bucket) {
-	self.Buckets = make([]*openflow15.Bucket, 0)
-	self.Buckets = append(self.Buckets, buckets...)
-	if self.isInstalled {
-		self.Install()
+	g.Buckets = append(g.Buckets, buckets...)
+	if g.isInstalled {
+		g.Install()
 	}
 }
 
-func (self *Group) AddProperty(prop util.Message) {
-	self.Properties = append(self.Properties, prop)
-	if self.isInstalled {
-		self.Install()
+func (g *Group) ResetBuckets(buckets ...*openflow15.Bucket) {
+	g.Buckets = make([]*openflow15.Bucket, 0)
+	g.Buckets = append(g.Buckets, buckets...)
+	if g.isInstalled {
+		g.Install()
 	}
 }
 
-func (self *Group) Install() error {
+func (g *Group) AddProperty(prop util.Message) {
+	g.Properties = append(g.Properties, prop)
+	if g.isInstalled {
+		g.Install()
+	}
+}
+
+func (g *Group) Install() error {
 	command := openflow15.OFPGC_ADD
-	if self.isInstalled {
+	if g.isInstalled {
 		command = openflow15.OFPGC_MODIFY
 	}
-	groupMod := self.getGroupModMessage(command)
+	groupMod := g.getGroupModMessage(command)
 
-	if err := self.Switch.Send(groupMod); err != nil {
+	if err := g.Switch.Send(groupMod); err != nil {
 		return err
 	}
 
 	// Mark it as installed
-	self.isInstalled = true
+	g.isInstalled = true
 
 	return nil
 }
 
-func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
+func (g *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 	groupMod := openflow15.NewGroupMod()
-	groupMod.GroupId = self.ID
+	groupMod.GroupId = g.ID
 	groupMod.Command = uint16(command)
 
-	switch self.GroupType {
+	switch g.GroupType {
 	case GroupAll:
 		groupMod.Type = openflow15.GT_ALL
 	case GroupSelect:
@@ -123,10 +123,10 @@ func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 	}
 
 	if command == openflow15.OFPGC_ADD || command == openflow15.OFPGC_MODIFY {
-		groupMod.Properties = append(groupMod.Properties, self.Properties...)
+		groupMod.Properties = append(groupMod.Properties, g.Properties...)
 	}
 
-	for _, bkt := range self.Buckets {
+	for _, bkt := range g.Buckets {
 		// Add the bucket to group
 		groupMod.AddBucket(*bkt)
 	}
@@ -138,25 +138,25 @@ func (self *Group) getGroupModMessage(command int) *openflow15.GroupMod {
 	return groupMod
 }
 
-func (self *Group) GetBundleMessage(command int) *GroupBundleMessage {
-	groupMod := self.getGroupModMessage(command)
+func (g *Group) GetBundleMessage(command int) *GroupBundleMessage {
+	groupMod := g.getGroupModMessage(command)
 	return &GroupBundleMessage{groupMod}
 }
 
-func (self *Group) Delete() error {
-	if self.isInstalled {
+func (g *Group) Delete() error {
+	if g.isInstalled {
 		groupMod := openflow15.NewGroupMod()
-		groupMod.GroupId = self.ID
+		groupMod.GroupId = g.ID
 		groupMod.Command = openflow15.OFPGC_DELETE
-		if err := self.Switch.Send(groupMod); err != nil {
+		if err := g.Switch.Send(groupMod); err != nil {
 			return err
 		}
 		// Mark it as unInstalled
-		self.isInstalled = false
+		g.isInstalled = false
 	}
 
 	// Delete group from switch cache
-	return self.Switch.DeleteGroup(self.ID)
+	return g.Switch.DeleteGroup(g.ID)
 }
 
 func NewGroup(groupId uint32, groupType GroupType, sw *OFSwitch) *Group {

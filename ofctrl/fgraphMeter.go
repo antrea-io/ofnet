@@ -44,43 +44,43 @@ type Meter struct {
 	isInstalled bool
 }
 
-func (self *Meter) Type() string {
+func (m *Meter) Type() string {
 	return "meter"
 }
 
-func (self *Meter) AddMeterBand(meterBands ...*util.Message) {
-	if self.MeterBands == nil {
-		self.MeterBands = make([]*util.Message, 0)
+func (m *Meter) AddMeterBand(meterBands ...*util.Message) {
+	if m.MeterBands == nil {
+		m.MeterBands = make([]*util.Message, 0)
 	}
-	self.MeterBands = append(self.MeterBands, meterBands...)
-	if self.isInstalled {
-		self.Install()
+	m.MeterBands = append(m.MeterBands, meterBands...)
+	if m.isInstalled {
+		m.Install()
 	}
 }
 
-func (self *Meter) Install() error {
+func (m *Meter) Install() error {
 	command := openflow15.MC_ADD
-	if self.isInstalled {
+	if m.isInstalled {
 		command = openflow15.MC_MODIFY
 	}
-	meterMod := self.getMeterModMessage(command)
+	meterMod := m.getMeterModMessage(command)
 
-	if err := self.Switch.Send(meterMod); err != nil {
+	if err := m.Switch.Send(meterMod); err != nil {
 		return err
 	}
 
 	// Mark it as installed
-	self.isInstalled = true
+	m.isInstalled = true
 
 	return nil
 }
 
-func (self *Meter) getMeterModMessage(command int) *openflow15.MeterMod {
+func (m *Meter) getMeterModMessage(command int) *openflow15.MeterMod {
 	meterMod := openflow15.NewMeterMod()
-	meterMod.MeterId = self.ID
-	meterMod.Flags = uint16(self.Flags)
+	meterMod.MeterId = m.ID
+	meterMod.Flags = uint16(m.Flags)
 
-	for _, mb := range self.MeterBands {
+	for _, mb := range m.MeterBands {
 		// Add the meterBands to meter
 		meterMod.AddMeterBand(*mb)
 	}
@@ -89,25 +89,25 @@ func (self *Meter) getMeterModMessage(command int) *openflow15.MeterMod {
 	return meterMod
 }
 
-func (self *Meter) GetBundleMessage(command int) *MeterBundleMessage {
-	meterMod := self.getMeterModMessage(command)
+func (m *Meter) GetBundleMessage(command int) *MeterBundleMessage {
+	meterMod := m.getMeterModMessage(command)
 	return &MeterBundleMessage{meterMod}
 }
 
-func (self *Meter) Delete() error {
-	if self.isInstalled {
+func (m *Meter) Delete() error {
+	if m.isInstalled {
 		meterMod := openflow15.NewMeterMod()
-		meterMod.MeterId = self.ID
+		meterMod.MeterId = m.ID
 		meterMod.Command = openflow15.MC_DELETE
-		if err := self.Switch.Send(meterMod); err != nil {
+		if err := m.Switch.Send(meterMod); err != nil {
 			return err
 		}
 		// Mark it as unInstalled
-		self.isInstalled = false
+		m.isInstalled = false
 	}
 
 	// Delete meter from switch cache
-	return self.Switch.DeleteMeter(self.ID)
+	return m.Switch.DeleteMeter(m.ID)
 }
 
 func NewMeter(meterId uint32, flags MeterFlag, sw *OFSwitch) *Meter {

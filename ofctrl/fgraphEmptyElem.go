@@ -11,12 +11,12 @@ type EmptyElem struct {
 }
 
 // Fgraph element type for the NXOutput
-func (self *EmptyElem) Type() string {
+func (e *EmptyElem) Type() string {
 	return "empty"
 }
 
 // instruction set for NXOutput element
-func (self *EmptyElem) GetFlowInstr() openflow15.Instruction {
+func (e *EmptyElem) GetFlowInstr() openflow15.Instruction {
 	instr := openflow15.NewInstrApplyActions()
 	return instr
 }

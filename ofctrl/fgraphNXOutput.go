@@ -10,14 +10,14 @@ type NXOutput struct {
 }
 
 // Return a NXOutput action
-func (self *NXOutput) GetActionMessage() openflow15.Action {
-	ofsNbits := self.fieldRange.ToOfsBits()
-	targetField := self.field
+func (o *NXOutput) GetActionMessage() openflow15.Action {
+	ofsNbits := o.fieldRange.ToOfsBits()
+	targetField := o.field
 	// Create NX output Register action
 	return openflow15.NewOutputFromField(targetField, ofsNbits)
 }
 
-func (self *NXOutput) GetActionType() string {
+func (o *NXOutput) GetActionType() string {
 	return ActTypeNXOutput
 }
 

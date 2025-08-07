@@ -47,7 +47,7 @@ type Transaction struct {
 }
 
 // NewTransaction creates a transaction on the switch. It will assign a bundle ID, and sets the bundle flags.
-func (self *OFSwitch) NewTransaction(flag TransactionType) *Transaction {
+func (s *OFSwitch) NewTransaction(flag TransactionType) *Transaction {
 	tx := new(Transaction)
 	tx.ID = atomic.AddUint32(&uid, 1)
 	if flag == 0 {
@@ -55,7 +55,7 @@ func (self *OFSwitch) NewTransaction(flag TransactionType) *Transaction {
 	} else {
 		tx.flag = flag
 	}
-	tx.ofSwitch = self
+	tx.ofSwitch = s
 	tx.controlReplyCh = make(chan MessageResult, 10)
 	tx.controlIntCh = make(chan MessageResult, 1)
 	return tx

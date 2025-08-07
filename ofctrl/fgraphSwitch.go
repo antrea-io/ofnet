@@ -23,155 +23,155 @@ import (
 )
 
 // Initialize the fgraph elements on the switch
-func (self *OFSwitch) initFgraph() {
+func (s *OFSwitch) initFgraph() {
 	// Create the DBs
-	self.tableDb = make(map[uint8]*Table)
-	self.groupDb = make(map[uint32]*Group)
-	self.meterDb = make(map[uint32]*Meter)
-	self.outputPorts = make(map[uint32]*Output)
+	s.tableDb = make(map[uint8]*Table)
+	s.groupDb = make(map[uint32]*Group)
+	s.meterDb = make(map[uint32]*Meter)
+	s.outputPorts = make(map[uint32]*Output)
 
 	// Create the table 0
 	table := new(Table)
-	table.Switch = self
+	table.Switch = s
 	table.TableId = 0
 	table.flowDb = make(map[string]*Flow)
-	self.tableDb[0] = table
+	s.tableDb[0] = table
 
 	// Create drop action
 	dropAction := new(Output)
 	dropAction.outputType = "drop"
 	dropAction.portNo = openflow15.P_ANY
-	self.dropAction = dropAction
+	s.dropAction = dropAction
 
 	// create send to controller action
 	sendToCtrler := new(Output)
 	sendToCtrler.outputType = "toController"
 	sendToCtrler.portNo = openflow15.P_CONTROLLER
-	self.sendToCtrler = sendToCtrler
+	s.sendToCtrler = sendToCtrler
 
 	// Create normal lookup action.
 	normalLookup := new(Output)
 	normalLookup.outputType = "normal"
 	normalLookup.portNo = openflow15.P_NORMAL
-	self.normalLookup = normalLookup
+	s.normalLookup = normalLookup
 }
 
 // Create a new table. return an error if it already exists
-func (self *OFSwitch) NewTable(tableId uint8) (*Table, error) {
-	self.tableDbMux.Lock()
-	defer self.tableDbMux.Unlock()
+func (s *OFSwitch) NewTable(tableId uint8) (*Table, error) {
+	s.tableDbMux.Lock()
+	defer s.tableDbMux.Unlock()
 	// Check the parameters
 	if tableId == 0 {
 		return nil, errors.New("Table 0 already exists")
 	}
 
 	// check if the table already exists
-	if self.tableDb[tableId] != nil {
+	if s.tableDb[tableId] != nil {
 		return nil, errors.New("Table already exists")
 	}
 
 	// Create a new table
-	table := NewTable(tableId, self)
+	table := NewTable(tableId, s)
 	table.flowDb = make(map[string]*Flow)
 	// Save it in the DB
-	self.tableDb[tableId] = table
+	s.tableDb[tableId] = table
 
 	return table, nil
 }
 
 // Delete a table.
 // Return an error if there are fgraph nodes pointing at it
-func (self *OFSwitch) DeleteTable(tableId uint8) error {
+func (s *OFSwitch) DeleteTable(tableId uint8) error {
 	// FIXME: to be implemented
 	return nil
 }
 
 // GetTable Returns a table
-func (self *OFSwitch) GetTable(tableId uint8) *Table {
-	self.tableDbMux.Lock()
-	defer self.tableDbMux.Unlock()
-	return self.tableDb[tableId]
+func (s *OFSwitch) GetTable(tableId uint8) *Table {
+	s.tableDbMux.Lock()
+	defer s.tableDbMux.Unlock()
+	return s.tableDb[tableId]
 }
 
 // Return table 0 which is the starting table for all packets
-func (self *OFSwitch) DefaultTable() *Table {
-	self.tableDbMux.Lock()
-	defer self.tableDbMux.Unlock()
-	return self.tableDb[0]
+func (s *OFSwitch) DefaultTable() *Table {
+	s.tableDbMux.Lock()
+	defer s.tableDbMux.Unlock()
+	return s.tableDb[0]
 }
 
 // Create a new group. return an error if it already exists
-func (self *OFSwitch) NewGroup(groupId uint32, groupType GroupType) (*Group, error) {
-	self.groupDbMux.Lock()
-	defer self.groupDbMux.Unlock()
+func (s *OFSwitch) NewGroup(groupId uint32, groupType GroupType) (*Group, error) {
+	s.groupDbMux.Lock()
+	defer s.groupDbMux.Unlock()
 	// check if the group already exists
-	if self.groupDb[groupId] != nil {
+	if s.groupDb[groupId] != nil {
 		return nil, errors.New("group already exists")
 	}
 
 	// Create a new group
-	group := NewGroup(groupId, groupType, self)
+	group := NewGroup(groupId, groupType, s)
 	// Save it in the DB
-	self.groupDb[groupId] = group
+	s.groupDb[groupId] = group
 
 	return group, nil
 }
 
 // Delete a group.
 // Return an error if there are flows refer pointing at it
-func (self *OFSwitch) DeleteGroup(groupId uint32) error {
-	self.groupDbMux.Lock()
-	defer self.groupDbMux.Unlock()
-	delete(self.groupDb, groupId)
+func (s *OFSwitch) DeleteGroup(groupId uint32) error {
+	s.groupDbMux.Lock()
+	defer s.groupDbMux.Unlock()
+	delete(s.groupDb, groupId)
 	return nil
 }
 
 // GetGroup Returns a group
-func (self *OFSwitch) GetGroup(groupId uint32) *Group {
-	self.groupDbMux.Lock()
-	defer self.groupDbMux.Unlock()
-	return self.groupDb[groupId]
+func (s *OFSwitch) GetGroup(groupId uint32) *Group {
+	s.groupDbMux.Lock()
+	defer s.groupDbMux.Unlock()
+	return s.groupDb[groupId]
 }
 
 // Create a new meter. return an error if it already exists
-func (self *OFSwitch) NewMeter(meterId uint32, flags MeterFlag) (*Meter, error) {
-	self.meterDbMux.Lock()
-	defer self.meterDbMux.Unlock()
+func (s *OFSwitch) NewMeter(meterId uint32, flags MeterFlag) (*Meter, error) {
+	s.meterDbMux.Lock()
+	defer s.meterDbMux.Unlock()
 	// check if the meter already exists
-	if _, ok := self.meterDb[meterId]; ok {
+	if _, ok := s.meterDb[meterId]; ok {
 		return nil, errors.New("meter already exists")
 	}
 
 	// Create a new meter
-	meter := NewMeter(meterId, flags, self)
+	meter := NewMeter(meterId, flags, s)
 	// Save it in the DB
-	self.meterDb[meterId] = meter
+	s.meterDb[meterId] = meter
 
 	return meter, nil
 }
 
 // Delete a meter.
 // Return an error if there are flows refer pointing at it
-func (self *OFSwitch) DeleteMeter(meterId uint32) error {
-	self.meterDbMux.Lock()
-	defer self.meterDbMux.Unlock()
-	delete(self.meterDb, meterId)
+func (s *OFSwitch) DeleteMeter(meterId uint32) error {
+	s.meterDbMux.Lock()
+	defer s.meterDbMux.Unlock()
+	delete(s.meterDb, meterId)
 	return nil
 }
 
 // GetGroup Returns a meter
-func (self *OFSwitch) GetMeter(meterId uint32) *Meter {
-	self.meterDbMux.Lock()
-	defer self.meterDbMux.Unlock()
-	return self.meterDb[meterId]
+func (s *OFSwitch) GetMeter(meterId uint32) *Meter {
+	s.meterDbMux.Lock()
+	defer s.meterDbMux.Unlock()
+	return s.meterDb[meterId]
 }
 
 // Return a output graph element for the port
-func (self *OFSwitch) OutputPort(portNo uint32) (*Output, error) {
-	self.portMux.Lock()
-	defer self.portMux.Unlock()
+func (s *OFSwitch) OutputPort(portNo uint32) (*Output, error) {
+	s.portMux.Lock()
+	defer s.portMux.Unlock()
 
-	if val, ok := self.outputPorts[portNo]; ok {
+	if val, ok := s.outputPorts[portNo]; ok {
 		return val, nil
 	}
 
@@ -181,34 +181,34 @@ func (self *OFSwitch) OutputPort(portNo uint32) (*Output, error) {
 	output.portNo = portNo
 
 	// store all outputs in a DB
-	self.outputPorts[portNo] = output
+	s.outputPorts[portNo] = output
 
 	return output, nil
 }
 
 // Return the drop graph element
-func (self *OFSwitch) DropAction() *Output {
-	return self.dropAction
+func (s *OFSwitch) DropAction() *Output {
+	return s.dropAction
 }
 
 // SendToController Return send to controller graph element
-func (self *OFSwitch) SendToController() *Output {
-	return self.sendToCtrler
+func (s *OFSwitch) SendToController() *Output {
+	return s.sendToCtrler
 }
 
 // NormalLookup Return normal lookup graph element
-func (self *OFSwitch) NormalLookup() *Output {
-	return self.normalLookup
+func (s *OFSwitch) NormalLookup() *Output {
+	return s.normalLookup
 }
 
 // FIXME: Unique group id for the flood entries
 var uniqueGroupId uint32 = 1
 
 // Create a new flood list
-func (self *OFSwitch) NewFlood() (*Flood, error) {
+func (s *OFSwitch) NewFlood() (*Flood, error) {
 	flood := new(Flood)
 
-	flood.Switch = self
+	flood.Switch = s
 	flood.GroupId = uniqueGroupId
 	uniqueGroupId += 1
 

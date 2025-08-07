@@ -75,37 +75,37 @@ func (d *OvsDriver) Delete() error {
 }
 
 // Populate local cache of ovs state
-func (self *OvsDriver) populateCache(updates libovsdb.TableUpdates) {
+func (d *OvsDriver) populateCache(updates libovsdb.TableUpdates) {
 	// lock the cache for write
-	self.lock.Lock()
-	defer self.lock.Unlock()
+	d.lock.Lock()
+	defer d.lock.Unlock()
 
 	for table, tableUpdate := range updates.Updates {
-		if _, ok := self.ovsdbCache[table]; !ok {
-			self.ovsdbCache[table] = make(map[string]libovsdb.Row)
+		if _, ok := d.ovsdbCache[table]; !ok {
+			d.ovsdbCache[table] = make(map[string]libovsdb.Row)
 
 		}
 		for uuid, row := range tableUpdate.Rows {
 			empty := libovsdb.Row{}
 			if !reflect.DeepEqual(row.New, empty) {
-				self.ovsdbCache[table][uuid] = row.New
+				d.ovsdbCache[table][uuid] = row.New
 			} else {
-				delete(self.ovsdbCache[table], uuid)
+				delete(d.ovsdbCache[table], uuid)
 			}
 		}
 	}
 }
 
 // Dump the contents of the cache into stdout
-func (self *OvsDriver) PrintCache() {
+func (d *OvsDriver) PrintCache() {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	fmt.Printf("OvsDB Cache: \n")
 
 	// walk the local cache
-	for tName, table := range self.ovsdbCache {
+	for tName, table := range d.ovsdbCache {
 		fmt.Printf("Table: %s\n", tName)
 		for uuid, row := range table {
 			fmt.Printf("  Row: UUID: %s\n", uuid)
@@ -117,25 +117,25 @@ func (self *OvsDriver) PrintCache() {
 }
 
 // Get the UUID for root
-func (self *OvsDriver) getRootUuid() libovsdb.UUID {
+func (d *OvsDriver) getRootUuid() libovsdb.UUID {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	// find the matching uuid
-	for uuid := range self.ovsdbCache["Open_vSwitch"] {
+	for uuid := range d.ovsdbCache["Open_vSwitch"] {
 		return libovsdb.UUID{GoUuid: uuid}
 	}
 	return libovsdb.UUID{}
 }
 
 // Wrapper for ovsDB transaction
-func (self *OvsDriver) ovsdbTransact(ops []libovsdb.Operation) error {
+func (d *OvsDriver) ovsdbTransact(ops []libovsdb.Operation) error {
 	// Print out what we are sending
 	log.Debugf("Transaction: %+v\n", ops)
 
 	// Perform OVSDB transaction
-	reply, _ := self.ovsClient.Transact("Open_vSwitch", ops...)
+	reply, _ := d.ovsClient.Transact("Open_vSwitch", ops...)
 
 	if len(reply) < len(ops) {
 		log.Errorf("Unexpected number of replies. Expected: %d, Recvd: %d", len(ops), len(reply))
@@ -156,13 +156,13 @@ func (self *OvsDriver) ovsdbTransact(ops []libovsdb.Operation) error {
 }
 
 // **************** OVS driver API ********************
-func (self *OvsDriver) CreateBridge(bridgeName string) error {
+func (d *OvsDriver) CreateBridge(bridgeName string) error {
 	namedUuidStr := "dummy"
 	protocols := []string{"OpenFlow10", "OpenFlow11", "OpenFlow12", "OpenFlow13", "OpenFlow14", "OpenFlow15"}
 
 	// If the bridge already exists, just return
 	// FIXME: should we delete the old bridge and create new one?
-	if self.IsBridgePresent(bridgeName) {
+	if d.IsBridgePresent(bridgeName) {
 		return nil
 	}
 
@@ -184,7 +184,7 @@ func (self *OvsDriver) CreateBridge(bridgeName string) error {
 	mutateUuid := brUuid
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "insert", mutateSet)
-	condition := libovsdb.NewCondition("_uuid", "==", self.getRootUuid())
+	condition := libovsdb.NewCondition("_uuid", "==", d.getRootUuid())
 
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
@@ -197,14 +197,14 @@ func (self *OvsDriver) CreateBridge(bridgeName string) error {
 	operations := []libovsdb.Operation{brOp, mutateOp}
 
 	// operations := []libovsdb.Operation{brOp}
-	return self.ovsdbTransact(operations)
+	return d.ovsdbTransact(operations)
 }
 
 // Delete a bridge from ovs
-func (self *OvsDriver) DeleteBridge(bridgeName string) error {
+func (d *OvsDriver) DeleteBridge(bridgeName string) error {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	namedUuidStr := "dummy"
 	brUuid := []libovsdb.UUID{{GoUuid: namedUuidStr}}
@@ -218,7 +218,7 @@ func (self *OvsDriver) DeleteBridge(bridgeName string) error {
 	}
 
 	// also fetch the br-uuid from cache
-	for uuid, row := range self.ovsdbCache["Bridge"] {
+	for uuid, row := range d.ovsdbCache["Bridge"] {
 		name := row.Fields["name"].(string)
 		if name == bridgeName {
 			brUuid = []libovsdb.UUID{{GoUuid: uuid}}
@@ -231,7 +231,7 @@ func (self *OvsDriver) DeleteBridge(bridgeName string) error {
 	mutateUuid := brUuid
 	mutateSet, _ := libovsdb.NewOvsSet(mutateUuid)
 	mutation := libovsdb.NewMutation("bridges", "delete", mutateSet)
-	condition = libovsdb.NewCondition("_uuid", "==", self.getRootUuid())
+	condition = libovsdb.NewCondition("_uuid", "==", d.getRootUuid())
 
 	// simple mutate operation
 	mutateOp := libovsdb.Operation{
@@ -242,11 +242,11 @@ func (self *OvsDriver) DeleteBridge(bridgeName string) error {
 	}
 
 	operations := []libovsdb.Operation{brOp, mutateOp}
-	return self.ovsdbTransact(operations)
+	return d.ovsdbTransact(operations)
 }
 
 // Create an internal port in OVS
-func (self *OvsDriver) CreatePort(intfName, intfType string, vlanTag uint) error {
+func (d *OvsDriver) CreatePort(intfName, intfType string, vlanTag uint) error {
 	portUuidStr := intfName
 	intfUuidStr := fmt.Sprintf("Intf%s", intfName)
 	portUuid := []libovsdb.UUID{{GoUuid: portUuidStr}}
@@ -293,7 +293,7 @@ func (self *OvsDriver) CreatePort(intfName, intfType string, vlanTag uint) error
 	// mutate the Ports column of the row in the Bridge table
 	mutateSet, _ := libovsdb.NewOvsSet(portUuid)
 	mutation := libovsdb.NewMutation("ports", opStr, mutateSet)
-	condition := libovsdb.NewCondition("name", "==", self.OvsBridgeName)
+	condition := libovsdb.NewCondition("name", "==", d.OvsBridgeName)
 	mutateOp := libovsdb.Operation{
 		Op:        "mutate",
 		Table:     "Bridge",
@@ -303,14 +303,14 @@ func (self *OvsDriver) CreatePort(intfName, intfType string, vlanTag uint) error
 
 	// Perform OVS transaction
 	operations := []libovsdb.Operation{intfOp, portOp, mutateOp}
-	return self.ovsdbTransact(operations)
+	return d.ovsdbTransact(operations)
 }
 
 // Delete a port from OVS
-func (self *OvsDriver) DeletePort(intfName string) error {
+func (d *OvsDriver) DeletePort(intfName string) error {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	portUuidStr := intfName
 	portUuid := []libovsdb.UUID{{GoUuid: portUuidStr}}
@@ -333,7 +333,7 @@ func (self *OvsDriver) DeletePort(intfName string) error {
 	}
 
 	// also fetch the port-uuid from cache
-	for uuid, row := range self.ovsdbCache["Port"] {
+	for uuid, row := range d.ovsdbCache["Port"] {
 		name := row.Fields["name"].(string)
 		if name == intfName {
 			portUuid = []libovsdb.UUID{{GoUuid: uuid}}
@@ -344,7 +344,7 @@ func (self *OvsDriver) DeletePort(intfName string) error {
 	// mutate the Ports column of the row in the Bridge table
 	mutateSet, _ := libovsdb.NewOvsSet(portUuid)
 	mutation := libovsdb.NewMutation("ports", opStr, mutateSet)
-	condition = libovsdb.NewCondition("name", "==", self.OvsBridgeName)
+	condition = libovsdb.NewCondition("name", "==", d.OvsBridgeName)
 	mutateOp := libovsdb.Operation{
 		Op:        "mutate",
 		Table:     "Bridge",
@@ -354,11 +354,11 @@ func (self *OvsDriver) DeletePort(intfName string) error {
 
 	// Perform OVS transaction
 	operations := []libovsdb.Operation{intfOp, portOp, mutateOp}
-	return self.ovsdbTransact(operations)
+	return d.ovsdbTransact(operations)
 }
 
 // Create a VTEP port on the OVS
-func (self *OvsDriver) CreateVtep(intfName string, vtepRemoteIP string) error {
+func (d *OvsDriver) CreateVtep(intfName string, vtepRemoteIP string) error {
 	portUuidStr := intfName
 	intfUuidStr := fmt.Sprintf("Intf%s", intfName)
 	portUuid := []libovsdb.UUID{{GoUuid: portUuidStr}}
@@ -412,7 +412,7 @@ func (self *OvsDriver) CreateVtep(intfName string, vtepRemoteIP string) error {
 	// mutate the Ports column of the row in the Bridge table
 	mutateSet, _ := libovsdb.NewOvsSet(portUuid)
 	mutation := libovsdb.NewMutation("ports", opStr, mutateSet)
-	condition := libovsdb.NewCondition("name", "==", self.OvsBridgeName)
+	condition := libovsdb.NewCondition("name", "==", d.OvsBridgeName)
 	mutateOp := libovsdb.Operation{
 		Op:        "mutate",
 		Table:     "Bridge",
@@ -422,23 +422,23 @@ func (self *OvsDriver) CreateVtep(intfName string, vtepRemoteIP string) error {
 
 	// Perform OVS transaction
 	operations := []libovsdb.Operation{intfOp, portOp, mutateOp}
-	return self.ovsdbTransact(operations)
+	return d.ovsdbTransact(operations)
 }
 
 // Delete a VTEP port
-func (self *OvsDriver) DeleteVtep(intfName string) error {
-	return self.DeletePort(intfName)
+func (d *OvsDriver) DeleteVtep(intfName string) error {
+	return d.DeletePort(intfName)
 }
 
 // Add controller configuration to OVS
-func (self *OvsDriver) AddController(ipAddr string, portNo uint16) error {
+func (d *OvsDriver) AddController(ipAddr string, portNo uint16) error {
 	// Format target string
 	target := fmt.Sprintf("tcp:%s:%d", ipAddr, portNo)
 	ctrlerUuidStr := "local"
 	ctrlerUuid := []libovsdb.UUID{{GoUuid: ctrlerUuidStr}}
 
 	// If controller already exists, nothing to do
-	if self.IsControllerPresent(ipAddr, portNo) {
+	if d.IsControllerPresent(ipAddr, portNo) {
 		return nil
 	}
 
@@ -457,7 +457,7 @@ func (self *OvsDriver) AddController(ipAddr string, portNo uint16) error {
 	// mutate the Controller column of the row in the Bridge table
 	mutateSet, _ := libovsdb.NewOvsSet(ctrlerUuid)
 	mutation := libovsdb.NewMutation("controller", "insert", mutateSet)
-	condition := libovsdb.NewCondition("name", "==", self.OvsBridgeName)
+	condition := libovsdb.NewCondition("name", "==", d.OvsBridgeName)
 	mutateOp := libovsdb.Operation{
 		Op:        "mutate",
 		Table:     "Bridge",
@@ -467,10 +467,10 @@ func (self *OvsDriver) AddController(ipAddr string, portNo uint16) error {
 
 	// Perform OVS transaction
 	operations := []libovsdb.Operation{ctrlerOp, mutateOp}
-	return self.ovsdbTransact(operations)
+	return d.ovsdbTransact(operations)
 }
 
-func (self *OvsDriver) RemoveController(target string) error {
+func (d *OvsDriver) RemoveController(target string) error {
 	// FIXME:
 	return nil
 }
@@ -478,13 +478,13 @@ func (self *OvsDriver) RemoveController(target string) error {
 // Check the local cache and see if the portname is taken already
 // HACK alert: This is used to pick next port number instead of managing
 // port number space actively across agent restarts
-func (self *OvsDriver) IsPortNamePresent(intfName string) bool {
+func (d *OvsDriver) IsPortNamePresent(intfName string) bool {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	// walk the local cache
-	for tName, table := range self.ovsdbCache {
+	for tName, table := range d.ovsdbCache {
 		if tName == "Port" {
 			for _, row := range table {
 				for fieldName, value := range row.Fields {
@@ -504,13 +504,13 @@ func (self *OvsDriver) IsPortNamePresent(intfName string) bool {
 }
 
 // Check if the bridge entry already exists
-func (self *OvsDriver) IsBridgePresent(bridgeName string) bool {
+func (d *OvsDriver) IsBridgePresent(bridgeName string) bool {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	// walk the bridge table in cache
-	for tName, table := range self.ovsdbCache {
+	for tName, table := range d.ovsdbCache {
 		if tName == "Bridge" {
 			for _, row := range table {
 				for fieldName, value := range row.Fields {
@@ -530,14 +530,14 @@ func (self *OvsDriver) IsBridgePresent(bridgeName string) bool {
 }
 
 // Check if Controller already exists
-func (self *OvsDriver) IsControllerPresent(ipAddr string, portNo uint16) bool {
+func (d *OvsDriver) IsControllerPresent(ipAddr string, portNo uint16) bool {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	// walk the locak cache
 	target := fmt.Sprintf("tcp:%s:%d", ipAddr, portNo)
-	for tName, table := range self.ovsdbCache {
+	for tName, table := range d.ovsdbCache {
 		if tName == "Controller" {
 			for _, row := range table {
 				for fieldName, value := range row.Fields {
@@ -557,13 +557,13 @@ func (self *OvsDriver) IsControllerPresent(ipAddr string, portNo uint16) bool {
 }
 
 // Check if VTEP already exists
-func (self *OvsDriver) IsVtepPresent(remoteIP string) (bool, string) {
+func (d *OvsDriver) IsVtepPresent(remoteIP string) (bool, string) {
 	// lock the cache for read
-	self.lock.RLock()
-	defer self.lock.RUnlock()
+	d.lock.RLock()
+	defer d.lock.RUnlock()
 
 	// walk the local cache
-	for tName, table := range self.ovsdbCache {
+	for tName, table := range d.ovsdbCache {
 		if tName == "Interface" {
 			for _, row := range table {
 				options := row.Fields["options"]
@@ -590,7 +590,7 @@ func (self *OvsDriver) IsVtepPresent(remoteIP string) (bool, string) {
 }
 
 // Return OFP port number for an interface
-func (self *OvsDriver) GetOfpPortNo(intfName string) (uint32, error) {
+func (d *OvsDriver) GetOfpPortNo(intfName string) (uint32, error) {
 	retryNo := 0
 	condition := libovsdb.NewCondition("name", "==", intfName)
 	selectOp := libovsdb.Operation{
@@ -600,7 +600,7 @@ func (self *OvsDriver) GetOfpPortNo(intfName string) (uint32, error) {
 	}
 
 	for {
-		row, err := self.ovsClient.Transact("Open_vSwitch", selectOp)
+		row, err := d.ovsClient.Transact("Open_vSwitch", selectOp)
 
 		if err == nil && len(row) > 0 && len(row[0].Rows) > 0 {
 			value := row[0].Rows[0]["ofport"]
@@ -622,16 +622,16 @@ func (self *OvsDriver) GetOfpPortNo(intfName string) (uint32, error) {
 }
 
 // ************************ Notification handler for OVS DB changes ****************
-func (self *OvsDriver) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
+func (d *OvsDriver) Update(context interface{}, tableUpdates libovsdb.TableUpdates) {
 	// fmt.Printf("Received OVS update: %+v\n\n", tableUpdates)
-	self.populateCache(tableUpdates)
+	d.populateCache(tableUpdates)
 }
-func (self *OvsDriver) Disconnected(ovsClient *libovsdb.OvsdbClient) {
+func (d *OvsDriver) Disconnected(ovsClient *libovsdb.OvsdbClient) {
 	log.Errorf("OVS BD client disconnected")
 }
-func (self *OvsDriver) Locked([]interface{}) {
+func (d *OvsDriver) Locked([]interface{}) {
 }
-func (self *OvsDriver) Stolen([]interface{}) {
+func (d *OvsDriver) Stolen([]interface{}) {
 }
-func (self *OvsDriver) Echo([]interface{}) {
+func (d *OvsDriver) Echo([]interface{}) {
 }

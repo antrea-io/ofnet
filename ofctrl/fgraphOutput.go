@@ -26,15 +26,15 @@ type Output struct {
 }
 
 // Fgraph element type for the output
-func (self *Output) Type() string {
+func (o *Output) Type() string {
 	return "output"
 }
 
 // instruction set for output element
-func (self *Output) GetFlowInstr() openflow15.Instruction {
+func (o *Output) GetFlowInstr() openflow15.Instruction {
 	outputInstr := openflow15.NewInstrApplyActions()
 
-	switch self.outputType {
+	switch o.outputType {
 	case "drop":
 		return nil
 	case "toController":
@@ -47,7 +47,7 @@ func (self *Output) GetFlowInstr() openflow15.Instruction {
 	case "inPort":
 		fallthrough
 	case "port":
-		outputAct := openflow15.NewActionOutput(self.portNo)
+		outputAct := openflow15.NewActionOutput(o.portNo)
 		outputInstr.AddAction(outputAct, false)
 	}
 
@@ -55,8 +55,8 @@ func (self *Output) GetFlowInstr() openflow15.Instruction {
 }
 
 // Return an output action (Used by group mods)
-func (self *Output) GetActionMessage() openflow15.Action {
-	switch self.outputType {
+func (o *Output) GetActionMessage() openflow15.Action {
+	switch o.outputType {
 	case "drop":
 		return nil
 	case "toController":
@@ -70,13 +70,13 @@ func (self *Output) GetActionMessage() openflow15.Action {
 	case "inPort":
 		fallthrough
 	case "port":
-		return openflow15.NewActionOutput(self.portNo)
+		return openflow15.NewActionOutput(o.portNo)
 	}
 
 	return nil
 }
 
-func (self *Output) GetActionType() string {
+func (o *Output) GetActionType() string {
 	return ActTypeOutput
 }
 
