@@ -262,20 +262,27 @@ func (m *MatchField) GetValue() interface{} {
 		if !m.HasMask {
 			return value
 		}
-		maskData := m.Mask.(*openflow15.Uint32Message)
 		return &Uint32WithMask{
 			Value: value,
-			Mask:  maskData.Data,
+			Mask:  m.Mask.(*openflow15.Uint32Message).Data,
 		}
 	case *openflow15.ByteArrayField:
 		value := v.Data
 		if !m.HasMask {
 			return value
 		}
-		mask, _ := m.Mask.MarshalBinary()
 		return &DataWithMask{
 			Value: value,
-			Mask:  mask,
+			Mask:  m.Mask.(*openflow15.ByteArrayField).Data,
+		}
+	case *openflow15.CTLabel:
+		value := v.Data[:]
+		if !m.HasMask {
+			return value
+		}
+		return &DataWithMask{
+			Value: value,
+			Mask:  m.Mask.(*openflow15.CTLabel).Data[:],
 		}
 	}
 	return nil
