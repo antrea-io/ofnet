@@ -96,6 +96,7 @@ type FlowMatch struct {
 	TunMetadatas  []*NXTunMetadata     // tun_metadataX or tun_metadataX[m..n]
 	PktMark       uint32               // Packet mark
 	PktMarkMask   *uint32              // Packet mark mask
+	CtZone        *uint16
 }
 
 // additional Actions in flow's instruction set
@@ -630,6 +631,11 @@ func (f *Flow) xlateMatch() openflow15.Match {
 		icmp4TypeField, _ := openflow15.FindFieldHeaderByName("NXM_OF_ICMP_TYPE", false)
 		icmp4TypeField.Value = &openflow15.IcmpTypeField{Type: *f.Match.Icmp4Type}
 		ofMatch.AddField(*icmp4TypeField)
+	}
+
+	if f.Match.CtZone != nil {
+		ctZoneField := openflow15.NewCTZoneMatchField(*f.Match.CtZone)
+		ofMatch.AddField(*ctZoneField)
 	}
 
 	return *ofMatch
