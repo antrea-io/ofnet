@@ -8,7 +8,7 @@ require (
 	github.com/contiv/libovsdb v0.0.0-20170227191248-d0061a53e358
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
