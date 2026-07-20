@@ -3,12 +3,12 @@ module antrea.io/ofnet
 go 1.24.0
 
 require (
-	antrea.io/libOpenflow v0.16.0
+	antrea.io/libOpenflow v0.17.0
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/contiv/libovsdb v0.0.0-20170227191248-d0061a53e358
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/sirupsen/logrus v1.9.3
-	github.com/stretchr/testify v1.10.0
+	github.com/stretchr/testify v1.11.1
 )
 
 require (
