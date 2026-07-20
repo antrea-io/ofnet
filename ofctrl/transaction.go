@@ -5,6 +5,7 @@ package ofctrl
 // transaction is complete and not Commit.
 
 import (
+	"errors"
 	"fmt"
 	"sync"
 	"sync/atomic"
@@ -14,6 +15,54 @@ import (
 	"antrea.io/libOpenflow/util"
 	log "github.com/sirupsen/logrus"
 )
+
+// A bundle control request that gets no definite reply leaves an UNKNOWN outcome, not a failure:
+// the switch may have applied the request anyway. Callers must not treat these as a definite
+// failure, unlike getError's errors, which are rejections by the switch. Each matches any of the
+// per-request errors below with errors.Is.
+var (
+	ErrBundleReplyTimeout  = errors.New("bundle reply is timeout")
+	ErrBundleReplyCanceled = errors.New("bundle reply is canceled because of disconnection from the Switch")
+)
+
+// Which request got no reply decides what the caller has to do about it. Only a commit can leave
+// the switch in a state the caller does not know: an open, close or discard changes nothing that
+// would need reverting. Each matches its generic error above with errors.Is.
+var (
+	ErrBundleOpenReplyTimeout    = fmt.Errorf("%w on open", ErrBundleReplyTimeout)
+	ErrBundleCloseReplyTimeout   = fmt.Errorf("%w on close", ErrBundleReplyTimeout)
+	ErrBundleCommitReplyTimeout  = fmt.Errorf("%w on commit", ErrBundleReplyTimeout)
+	ErrBundleDiscardReplyTimeout = fmt.Errorf("%w on discard", ErrBundleReplyTimeout)
+
+	ErrBundleOpenReplyCanceled    = fmt.Errorf("%w on open", ErrBundleReplyCanceled)
+	ErrBundleCloseReplyCanceled   = fmt.Errorf("%w on close", ErrBundleReplyCanceled)
+	ErrBundleCommitReplyCanceled  = fmt.Errorf("%w on commit", ErrBundleReplyCanceled)
+	ErrBundleDiscardReplyCanceled = fmt.Errorf("%w on discard", ErrBundleReplyCanceled)
+)
+
+var bundleReplyErrors = map[uint16]struct {
+	timeout,
+	canceled error
+}{
+	openflow15.OFPBCT_OPEN_REQUEST:    {ErrBundleOpenReplyTimeout, ErrBundleOpenReplyCanceled},
+	openflow15.OFPBCT_CLOSE_REQUEST:   {ErrBundleCloseReplyTimeout, ErrBundleCloseReplyCanceled},
+	openflow15.OFPBCT_COMMIT_REQUEST:  {ErrBundleCommitReplyTimeout, ErrBundleCommitReplyCanceled},
+	openflow15.OFPBCT_DISCARD_REQUEST: {ErrBundleDiscardReplyTimeout, ErrBundleDiscardReplyCanceled},
+}
+
+func bundleReplyTimeout(requestType uint16) error {
+	if e, ok := bundleReplyErrors[requestType]; ok {
+		return e.timeout
+	}
+	return ErrBundleReplyTimeout
+}
+
+func bundleReplyCanceled(requestType uint16) error {
+	if e, ok := bundleReplyErrors[requestType]; ok {
+		return e.canceled
+	}
+	return ErrBundleReplyCanceled
+}
 
 type TransactionType uint16
 
@@ -70,7 +119,7 @@ func (tx *Transaction) getError(reply MessageResult) error {
 	return fmt.Errorf("unsupported bundle error with type %d and code %d", errType, errCode)
 }
 
-func (tx *Transaction) sendControlRequest(xID uint32, msg util.Message) error {
+func (tx *Transaction) sendControlRequest(xID uint32, msg *openflow15.BundleCtrl) error {
 	if err := tx.ofSwitch.Send(msg); err != nil {
 		return err
 	}
@@ -83,9 +132,9 @@ func (tx *Transaction) sendControlRequest(xID uint32, msg util.Message) error {
 			return tx.getError(reply)
 		}
 	case <-time.After(messageTimeout):
-		return fmt.Errorf("bundle reply is timeout")
+		return bundleReplyTimeout(msg.Type)
 	case <-tx.ofSwitch.ctx.Done():
-		return fmt.Errorf("bundle reply is canceled because of disconnection from the Switch")
+		return bundleReplyCanceled(msg.Type)
 	}
 }
 
