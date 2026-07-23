@@ -8,3 +8,9 @@ This repository started as a fork of
 longer actively maintained. This repository is mainly used by Antrea, and a lot
 of code that is not needed in Antrea has been removed compared to the original
 Contiv repository.
+
+# Ofctrl
+
+This library implements a simple Openflow1.5 controller API
+
+You can see docs here: [Ofctrl Documentation](ofctrl/README.md)

@@ -1,52 +1,92 @@
 # Ofctrl
 
-This library implements a simple Openflow1.3 controller API
+This library implements a simple Openflow1.5 controller API
 
 # Usage
 
-    // Create a controller
-    ctrler := ofctrl.NewController(&app)
+```go
+// Create a controller
+ctrler := ofctrl.NewController(&app)
 
-    // Listen for connections
-    ctrler.Listen(":6633")
-
+// Listen for connections
+ctrler.Listen(":6633")
+```
 
 This creates a new controller and registers the app for event callbacks. The app needs to implement following interface to get callbacks when an openflow switch connects to the controller.
 
+```go
+type AppInterface interface {
+    // A Switch connected to the controller
+    SwitchConnected(sw *OFSwitch)
 
-    type AppInterface interface {
-        // A Switch connected to the controller
-        SwitchConnected(sw *OFSwitch)
+    // Switch disconnected from the controller
+    SwitchDisconnected(sw *OFSwitch)
 
-        // Switch disconnected from the controller
-        SwitchDisconnected(sw *OFSwitch)
+    // Controller received a packet from the switch
+    PacketRcvd(sw *OFSwitch, pkt *PacketIn)
 
-        // Controller received a packet from the switch
-        PacketRcvd(sw *OFSwitch, pkt *PacketIn)
-    }
+    // Controller received a multi-part reply from the switch
+    MultipartReply(sw *OFSwitch, rep *openflow15.MultipartReply)
+
+    FlowGraphEnabledOnSwitch() bool
+
+    TLVMapEnabledOnSwitch() bool
+
+    // PortStatusRcvd notifies AppInterface a new PortStatus message is received.
+    PortStatusRcvd(status *openflow15.PortStatus)
+}
+```
 
 # Example app
 
-    type OfApp struct {
-        Switch *ofctrl.OFSwitch
-    }
+```go
+package main
 
-    func (o *OfApp) PacketRcvd(sw *ofctrl.OFSwitch, packet *openflow15.PacketIn) {
-        log.Printf("App: Received packet: %+v", packet)
-    }
+import (
+    "log"
 
-    func (o *OfApp) SwitchConnected(sw *ofctrl.OFSwitch) {
-        log.Printf("App: Switch connected: %v", sw.DPID())
+    "antrea.io/libOpenflow/openflow15"
+    "antrea.io/ofnet/ofctrl"
+)
 
-        // Store switch for later use
-        o.Switch = sw
-    }
+type OfApp struct {
+    Switch *ofctrl.OFSwitch
+}
 
-    func (o *OfApp) SwitchDisconnected(sw *ofctrl.OFSwitch) {
-        log.Printf("App: Switch connected: %v", sw.DPID())
-    }
+func (o *OfApp) PacketRcvd(sw *ofctrl.OFSwitch, packet *ofctrl.PacketIn) {
+    log.Printf("App: Received packet: %+v", packet)
+}
 
-    // Main app
+func (o *OfApp) SwitchConnected(sw *ofctrl.OFSwitch) {
+    log.Printf("App: Switch connected: %v", sw.DPID())
+    o.Switch = sw
+}
+
+func (o *OfApp) SwitchDisconnected(sw *ofctrl.OFSwitch) {
+    log.Printf("App: Switch Disconnected: %v", sw.DPID())
+}
+
+func (o *OfApp) MultipartReply(sw *ofctrl.OFSwitch, rep *openflow15.MultipartReply) {
+    log.Printf("App: Multipart reply: %+v", rep)
+}
+
+func (o *OfApp) FlowGraphEnabledOnSwitch() bool {
+    return true
+}
+
+func (o *OfApp) TLVMapEnabledOnSwitch() bool {
+    return true
+}
+
+func (o *OfApp) ExperimenterMessageEnabledOnSwitch() bool {
+    return false
+}
+
+func (o *OfApp) PortStatusRcvd(status *openflow15.PortStatus) {
+    log.Printf("App: New PortStatus message: %+v", status)
+}
+
+func main() {
     var app OfApp
 
     // Create a controller
@@ -54,6 +94,9 @@ This creates a new controller and registers the app for event callbacks. The app
 
     // start listening
     ctrler.Listen(":6633")
+}
+
+```
 
 # Working with OpenVswitch
 
@@ -61,16 +104,16 @@ This creates a new controller and registers the app for event callbacks. The app
 `ovs-vsctl set-controller <bridge-name> tcp:<ip-addr>:<port>`
 
 Example:
-
-    sudo ovs-vsctl set-controller ovsbr0 tcp:127.0.0.1:6633
-
-### To enable openflow1.3 support in OVS:
-`ovs-vsctl set bridge <bridge-name> protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13`
+```bash
+sudo ovs-vsctl set-controller ovsbr0 tcp:127.0.0.1:6633
+```
+### To enable openflow1.5 support in OVS:
+`ovs-vsctl set bridge <bridge-name> protocols=OpenFlow15`
 
 Example:
-
-    sudo ovs-vsctl set bridge ovsbr0 protocols=OpenFlow10,OpenFlow11,OpenFlow12,OpenFlow13
-
+```bash
+sudo ovs-vsctl set bridge ovsbr0 protocols=OpenFlow15
+```
 # Forwarding Graph API
 An app can install flow table entries into the Openflow switch by using forwarding graph API.
 Forwarding graph is made up of forwarding elements which determine how a packet lookups are done. Forwarding graph is a higher level interface that is converted to Openflow1.3 flows, instructions, groups and actions by the library

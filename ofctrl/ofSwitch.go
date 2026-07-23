@@ -187,10 +187,12 @@ func (s *OFSwitch) switchConnected() error {
 		log.Errorf("Failed to set switch config: %v", err)
 		return err
 	}
-	// Set controller ID on the Switch.
-	if err := s.Send(openflow15.NewSetControllerID(s.ctrlID)); err != nil {
-		log.Errorf("Failed to set controller ID: %v", err)
-		return err
+	if s.app.ExperimenterMessageEnabledOnSwitch() {
+		// Set controller ID on the Switch.
+		if err := s.Send(openflow15.NewSetControllerID(s.ctrlID)); err != nil {
+			log.Errorf("Failed to set controller ID: %v", err)
+			return err
+		}
 	}
 	s.changeStatus(true)
 	s.app.SwitchConnected(s)
@@ -215,6 +217,9 @@ func (s *OFSwitch) receive() {
 		case msg := <-s.stream.Inbound:
 			// New message has been received from message
 			// stream.
+			if !s.app.OFPMessageRcvd(s, msg) {
+				return
+			}
 			s.handleMessages(s.dpid, msg)
 		case err := <-s.stream.Error:
 			log.Warnf("Received ERROR message from switch %v. Err: %v", s.dpid, err)
