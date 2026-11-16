@@ -1,10 +1,10 @@
 module antrea.io/ofnet
 
-go 1.24.0
+go 1.26.0
 
 require (
 	antrea.io/libOpenflow v0.17.0
-	github.com/Microsoft/go-winio v0.6.2
+	github.com/Microsoft/go-winio v0.6.4
 	github.com/contiv/libovsdb v0.0.0-20160406174930-bbc744d8ddc8
 	github.com/orcaman/concurrent-map/v2 v2.0.1
 	github.com/sirupsen/logrus v1.10.2
@@ -16,6 +16,6 @@ require (
 	github.com/cenkalti/rpc2 v1.0.3 // indirect
 	github.com/go-logr/logr v1.4.2 // indirect
 	go.yaml.in/yaml/v3 v3.0.5 // indirect
-	golang.org/x/sys v0.25.0 // indirect
+	golang.org/x/sys v0.49.0 // indirect
 	k8s.io/klog/v2 v2.130.1 // indirect
 )
