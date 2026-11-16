@@ -7,7 +7,7 @@ require (
 	github.com/Microsoft/go-winio v0.6.2
 	github.com/contiv/libovsdb v0.0.0-20160406174930-bbc744d8ddc8
 	github.com/orcaman/concurrent-map/v2 v2.0.1
-	github.com/sirupsen/logrus v1.9.3
+	github.com/sirupsen/logrus v1.10.2
 	github.com/stretchr/testify v1.12.1
 )
 
